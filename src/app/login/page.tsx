@@ -1,0 +1,36 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { login } from "@/lib/actions/auth";
+import { AuthShell } from "@/components/auth-shell";
+import { ActionForm, SubmitButton } from "@/components/form";
+
+export default async function LoginPage() {
+  if (await getSession()) redirect("/dashboard");
+
+  return (
+    <AuthShell
+      title="Masuk"
+      subtitle="Lanjutkan mencatat keuangan usahamu."
+      footer={
+        <>
+          Belum punya akun?{" "}
+          <Link href="/signup" className="font-semibold text-clay">
+            Buat akun
+          </Link>
+        </>
+      }
+    >
+      <ActionForm action={login} footer={<SubmitButton pendingLabel="Masuk…">Masuk</SubmitButton>}>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Email</span>
+          <input name="email" type="email" required autoComplete="email" className="field" placeholder="nama@email.com" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Kata sandi</span>
+          <input name="password" type="password" required autoComplete="current-password" className="field" />
+        </label>
+      </ActionForm>
+    </AuthShell>
+  );
+}

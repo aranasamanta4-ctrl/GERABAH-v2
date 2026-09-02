@@ -1,0 +1,278 @@
+// GERABAH v2 — Prisma schema
+// PostgreSQL (Supabase).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Core ──────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  businesses Business[]
+}
+
+model Business {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  location        String?
+  categoryDefault String   @default("Gerabah / Keramik")
+  createdAt       DateTime @default(now())
+
+  customers             Customer[]
+  productCategories     ProductCategory[]
+  expenseCategories     ExpenseCategory[]
+  incomeCategories      IncomeCategory[]
+  salesChannels         SalesChannel[]
+  paymentMethods        PaymentMethod[]
+  products              Product[]
+  sales                 Sale[]
+  orders                Order[]
+  financialTransactions FinancialTransaction[]
+  payments              Payment[]
+
+  @@index([ownerId])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  type       String   @default("New") // New/Returning/Reseller/Wholesale/Other
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  sales  Sale[]
+  orders Order[]
+
+  @@index([businessId])
+}
+
+// ── Lookup tables (per-business, editable) ──────────────
+
+model ProductCategory {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  products   Product[]
+
+  @@unique([businessId, name])
+}
+
+model ExpenseCategory {
+  id           String                 @id @default(cuid())
+  businessId   String
+  business     Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  transactions FinancialTransaction[] @relation("ExpenseCategoryTx")
+
+  @@unique([businessId, name])
+}
+
+model IncomeCategory {
+  id           String                 @id @default(cuid())
+  businessId   String
+  business     Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  transactions FinancialTransaction[] @relation("IncomeCategoryTx")
+
+  @@unique([businessId, name])
+}
+
+model SalesChannel {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  sales      Sale[]
+  orders     Order[]
+
+  @@unique([businessId, name])
+}
+
+model PaymentMethod {
+  id           String                 @id @default(cuid())
+  businessId   String
+  business     Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  sales        Sale[]
+  transactions FinancialTransaction[]
+  payments     Payment[]
+
+  @@unique([businessId, name])
+}
+
+// ── Products ──────────────────────────────────────────
+
+model Product {
+  id           String           @id @default(cuid())
+  businessId   String
+  business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  photoUrl     String?
+  categoryId   String?
+  category     ProductCategory? @relation(fields: [categoryId], references: [id])
+  description  String?
+  material     String?
+  sellingPrice Float
+  stock        Int              @default(0)
+  minStock     Int              @default(0)
+  status       String           @default("active") // active/inactive/out_of_stock
+  createdAt    DateTime         @default(now())
+
+  costComponents ProductCostComponent[]
+  saleItems      SaleItem[]
+  orderItems     OrderItem[]
+
+  @@index([businessId])
+}
+
+model ProductCostComponent {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String  // Material Cost / Labor Cost / Packaging Cost / Other
+  amount    Float
+
+  @@index([productId])
+}
+
+// ── Sales & Orders ────────────────────────────────────
+
+model Sale {
+  id                 String        @id @default(cuid())
+  businessId         String
+  business           Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId         String?
+  customer           Customer?     @relation(fields: [customerId], references: [id])
+  channelId          String?
+  channel            SalesChannel? @relation(fields: [channelId], references: [id])
+  date               DateTime      @default(now())
+  subtotal           Float
+  discount           Float         @default(0)
+  total              Float
+  amountPaid         Float         @default(0)
+  outstandingBalance Float         @default(0)
+  paymentStatus      String        @default("Unpaid") // Unpaid/Partially Paid/Paid/Cancelled
+  paymentMethodId    String?
+  paymentMethod      PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  orderId            String?        @unique
+  order              Order?         @relation(fields: [orderId], references: [id])
+  notes              String?
+
+  items                 SaleItem[]
+  financialTransactions FinancialTransaction[]
+  payments              Payment[]
+
+  @@index([businessId, date])
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  lineTotal Float
+
+  @@index([saleId])
+}
+
+model Order {
+  id               String        @id @default(cuid())
+  businessId       String
+  business         Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         Customer?     @relation(fields: [customerId], references: [id])
+  channelId        String?
+  channel          SalesChannel? @relation(fields: [channelId], references: [id])
+  date             DateTime      @default(now())
+  status           String        @default("New") // New/Confirmed/Processing/Ready/Completed/Cancelled
+  paymentStatus    String        @default("Unpaid") // Unpaid/Partially Paid/Paid
+  downPayment      Float         @default(0)
+  remainingPayment Float         @default(0)
+  total            Float
+  dueDate          DateTime?
+  notes            String?
+
+  items    OrderItem[]
+  sale     Sale?
+  payments Payment[]
+
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  discount  Float   @default(0)
+
+  @@index([orderId])
+}
+
+// ── Finance ───────────────────────────────────────────
+
+model FinancialTransaction {
+  id                String           @id @default(cuid())
+  businessId        String
+  business          Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type              String           // INCOME/EXPENSE
+  incomeCategoryId  String?
+  incomeCategory    IncomeCategory?  @relation("IncomeCategoryTx", fields: [incomeCategoryId], references: [id])
+  expenseCategoryId String?
+  expenseCategory   ExpenseCategory? @relation("ExpenseCategoryTx", fields: [expenseCategoryId], references: [id])
+  date              DateTime         @default(now())
+  description       String?
+  amount            Float
+  paymentMethodId   String?
+  paymentMethod     PaymentMethod?   @relation(fields: [paymentMethodId], references: [id])
+  reference         String?
+  relatedSaleId     String?
+  relatedSale       Sale?            @relation(fields: [relatedSaleId], references: [id])
+  notes             String?
+
+  @@index([businessId, date, type])
+}
+
+model Payment {
+  id         String         @id @default(cuid())
+  businessId String
+  business   Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?         @relation(fields: [orderId], references: [id])
+  saleId     String?
+  sale       Sale?          @relation(fields: [saleId], references: [id])
+  amount     Float
+  methodId   String?
+  method     PaymentMethod? @relation(fields: [methodId], references: [id])
+  date       DateTime       @default(now())
+
+  @@index([businessId])
+}
