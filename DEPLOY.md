@@ -23,21 +23,22 @@ Set ketiganya untuk **Production, Preview, Development** (centang semua).
 
 ## 3. Deploy
 
-Klik **Deploy**. Yang terjadi:
-- `npm install` → `postinstall` jalankan `prisma generate`
-- `prisma migrate deploy` → terapkan migrasi ke Supabase (yang `init` sudah ada, jadi no-op)
-- `next build`
+Klik **Deploy**. Build: `prisma generate && next build`.
+
+> **Migrasi TIDAK dijalankan saat build Vercel** — `prisma migrate deploy` sering menggantung lewat
+> Supabase pooler (advisory lock tidak didukung di session pooler). Skema dikelola dari lokal.
 
 Selesai → dapat URL `https://gerabah-v2-xxxx.vercel.app`.
 
 ## 4. Setiap ada perubahan skema DB
 
+Jalankan migrasi dari komputer, **sebelum** push:
+
 ```bash
-# lokal:
-npx prisma migrate dev --name <nama_perubahan>
+npx prisma migrate deploy          # terapkan ke Supabase (pakai DIRECT_URL)
 git add prisma/migrations && git commit -m "..." && git push
 ```
-Vercel otomatis jalankan `prisma migrate deploy` saat build berikutnya.
+Vercel build berikutnya cuma `prisma generate` (baca skema baru) + `next build`.
 
 ## ⚠️ Yang BELUM jalan di production
 
