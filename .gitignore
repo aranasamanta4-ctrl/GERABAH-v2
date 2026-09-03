@@ -64,3 +64,6 @@ scripts/preview-invoice.png
 # on disk for context but not committed. Descriptions live in docs/reference/README.md
 /docs/reference/*
 !/docs/reference/README.md
+
+# Catatan kredensial lokal
+KREDENSIAL-JANGAN-COMMIT.txt
