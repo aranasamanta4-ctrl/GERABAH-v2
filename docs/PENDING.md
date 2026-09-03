@@ -1,39 +1,46 @@
 # GERABAH v2 — Pending
 
-**Dibuat:** 3 September 2026
+**Dibuat:** 3 September 2026 · **Terakhir diperbarui:** 3 September 2026
 
-## 🔴 Sebelum bisa dipakai
+## ✅ Sudah beres
 
-1. **Buat project Supabase baru + isi `.env`** — lihat `SETUP.md`. Tanpa ini `npm run dev` jalan tapi semua
-   halaman error waktu query DB.
-2. **Jalankan `prisma migrate dev --name init`** (atau `prisma db push`) untuk membuat tabel.
-3. **`AUTH_SECRET`** — ganti dari nilai dev sebelum dipakai serius.
+- Project Supabase (`ref sndvjvtfdsgbgedrevic`, ap-southeast-1) + `.env` terisi + `AUTH_SECRET` acak.
+- `prisma migrate dev --name init` — semua tabel dibuat.
+- Smoke test lewat HTTP: **semua 30 route** (termasuk detail produk/penjualan/pesanan/pelanggan, form
+  edit, laporan dengan data, invoice PDF, export CSV) → 200, tidak ada error di log dev server.
+  PDF valid (`%PDF-1.7`), CSV isinya benar.
 
 ## 🟡 Sebelum production
 
-4. **Upload foto/video** — `src/lib/upload.ts` masih simpan ke `public/uploads/` (disk). Tidak permanen di
-   Vercel. Pindah ke **Supabase Storage** (project sudah ada).
-5. **Verifikasi visual tiap layar** dengan data asli — build + typecheck + lint sudah bersih, tapi belum
-   pernah dijalankan dengan database sungguhan. Layar yang perlu dicek: Beranda, Keuangan, Produk (form +
-   detail + edit), Penjualan (form + detail + invoice PDF), Pesanan (pipeline status + pembayaran + nota),
-   Pelanggan, Laporan, Pengaturan.
-6. **Invoice PDF** — logika di-port dari v1 (sudah terbukti). Uji `scripts/preview-invoice.ts` untuk
-   mengecek layout tanpa DB: `npx tsx scripts/preview-invoice.ts`.
+1. **Verifikasi visual di browser** — smoke test cuma cek "tidak error + konten muncul". Belum ada mata
+   manusia yang melihat tata letaknya di HP asli. Buka `npm run dev` → daftar → coba tiap alur.
+2. **Upload foto/video** — `src/lib/upload.ts` simpan ke `public/uploads/` (disk). Tidak permanen di
+   Vercel serverless. Pindah ke **Supabase Storage**.
+3. **`AUTH_SECRET` di Vercel** — set env var-nya (nilainya ada di `KREDENSIAL-JANGAN-COMMIT.txt`), plus
+   `DATABASE_URL` (pooler 6543). Region `sin1`.
 
 ## 🟢 Nice-to-have
 
-7. Belum ada halaman kelola kategori/tempat jualan/metode bayar terpisah — untuk sekarang semuanya
-   "ketik baru untuk menambah" di form masing-masing. Halaman kelola bisa ditambah di Pengaturan.
-8. `SaleForm`/`OrderForm` hanya mendukung 1 produk per transaksi (sama seperti v1). Multi-item butuh
-   perubahan skema form + action.
-9. Belum ada service worker untuk offline. Manifest + install-to-homescreen sudah jalan.
-10. `next dev` menulis blok "This is NOT the Next.js you know" ke `AGENTS.md` — belum dibuat file itu di
-    v2; biarkan `next dev` yang membuatnya, lalu commit.
+4. Belum ada halaman kelola kategori / tempat jualan / metode bayar. Sekarang "ketik baru untuk menambah"
+   di tiap form. Halaman kelola bisa ditambah di Pengaturan.
+5. `SaleForm` / `OrderForm` hanya 1 produk per transaksi (sama seperti v1). Multi-item butuh perubahan
+   form + action.
+6. Belum ada service worker offline. Manifest + install-to-homescreen sudah jalan.
+7. `next dev` menulis blok "This is NOT the Next.js you know" ke `AGENTS.md` saat pertama jalan — commit
+   file itu bersama perubahan berikutnya supaya tree bersih.
+
+## Reset data
+
+- **Satu akun:** `npx tsx scripts/reset-account.ts <email>` — hapus data + user login.
+- **Semua akun:** `npx tsx scripts/reset-data.ts` — kosongkan semua tabel.
+- Keduanya hapus berurutan (child dulu). `onDelete: Cascade` dari `Business` **tidak cukup sendiri**
+  karena `SaleItem.product` / `OrderItem.product` masih `Restrict`. Kalau mau `DELETE FROM "Business"`
+  langsung jalan, tambah `onDelete: Cascade` di dua relasi itu + migrasi baru.
 
 ## Catatan teknis
 
-- Semua server action pakai signature `(prevState, formData) => Promise<FormState>` + `useActionState`.
-  Helper `run()` di `src/lib/actions/_helpers.ts` membungkus error jadi `{ error }` inline.
-- Skema pakai `onDelete: Cascade` dari `Business` ke bawah → reset data 1 akun cukup
-  `DELETE FROM "Business" WHERE "ownerId" = ...` (atau hapus User, cascade ikut).
-- Reset semua: `TRUNCATE ... RESTART IDENTITY CASCADE` seperti di v1.
+- Semua server action: `(prevState, formData) => Promise<FormState>` + `useActionState`. Helper `run()`
+  di `src/lib/actions/_helpers.ts` membungkus error jadi `{ error }` inline; tombol punya state pending
+  lewat `useFormStatus`.
+- `prisma.config.ts` pakai `DIRECT_URL` (port 5432) untuk migrasi, `src/lib/prisma.ts` pakai
+  `DATABASE_URL` (pooler 6543) untuk aplikasi.
