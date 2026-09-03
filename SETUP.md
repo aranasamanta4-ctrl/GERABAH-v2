@@ -19,29 +19,16 @@ Ada 2 string:
 
 ## 3. Isi `.env`
 
-Buka `.env` di folder ini, ganti `DATABASE_URL` dengan **Transaction pooler**:
-
-```
-DATABASE_URL="postgresql://postgres.xxxx:PASSWORD@aws-0-...pooler.supabase.com:6543/postgres?pgbouncer=true"
-AUTH_SECRET="<hasil: openssl rand -base64 32>"
-```
-
-Ganti juga `AUTH_SECRET` dengan string acak (jangan pakai nilai dev untuk seterusnya).
+Tab **Prisma** di Supabase menampilkan 2 baris (`DATABASE_URL` = pooler 6543, `DIRECT_URL` = 5432).
+Salin keduanya ke `C:\Users\LENOVO\Downloads\GERABAH-v2\.env`, ganti `[YOUR-PASSWORD]` dengan database
+password project-mu, dan ganti `AUTH_SECRET` dengan string acak.
 
 ## 4. Jalankan migrasi (bikin tabel)
 
-Migrasi butuh **Session pooler (port 5432)**. Cara paling cepat — sementara pakai string 5432:
+`prisma.config.ts` otomatis pakai `DIRECT_URL` untuk migrasi — tidak perlu tukar string manual:
 
 ```bash
-# sementara set DATABASE_URL ke versi port 5432 (tanpa ?pgbouncer=true), lalu:
 npx prisma migrate dev --name init
-# balikin DATABASE_URL ke versi port 6543 (?pgbouncer=true)
-```
-
-Atau, kalau belum mau ribet migrasi, cukup push skema:
-
-```bash
-npx prisma db push        # juga butuh koneksi biasa; tidak bikin file migrasi
 ```
 
 ## 5. Cek koneksi & jalankan

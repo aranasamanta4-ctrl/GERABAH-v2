@@ -9,6 +9,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migrasi butuh koneksi non-pooled: pakai DIRECT_URL (Session pooler / port 5432)
+    // kalau ada, jatuh ke DATABASE_URL kalau tidak.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });
