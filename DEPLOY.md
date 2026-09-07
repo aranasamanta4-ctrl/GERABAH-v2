@@ -18,12 +18,12 @@ Sebelum klik Deploy, buka **Environment Variables**, tambahkan 3 ini
 | `DATABASE_URL` | `postgresql://postgres.sndvjvtfdsgbgedrevic:PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true` | aplikasi |
 | `DIRECT_URL` | `postgresql://postgres.sndvjvtfdsgbgedrevic:PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres` | migrasi saat build |
 | `AUTH_SECRET` | string acak dari `.env` | tanda tangan cookie login |
-| `NEXT_PUBLIC_ADMIN_WHATSAPP` | `6281234567890` | menu "Bantuan" & halaman "Lupa Kata Sandi" |
 
 Set semuanya untuk **Production, Preview, Development** (centang semua).
 
-> `NEXT_PUBLIC_ADMIN_WHATSAPP` opsional — kalau kosong, tombol Tanya Admin & Lupa Kata Sandi
-> menampilkan info "hubungi pengelola".
+> Nomor WhatsApp admin (menu Bantuan & Lupa Kata Sandi) sudah punya nilai bawaan di
+> `src/lib/config.ts`. Untuk menggantinya tanpa ubah kode, set env `NEXT_PUBLIC_ADMIN_WHATSAPP`
+> (format `62…`) lalu redeploy.
 
 ### Lupa kata sandi (reset manual)
 
