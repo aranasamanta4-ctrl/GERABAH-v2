@@ -22,8 +22,8 @@ Sebelum klik Deploy, buka **Environment Variables**, tambahkan 3 ini
 Set semuanya untuk **Production, Preview, Development** (centang semua).
 
 > Nomor WhatsApp admin (menu Bantuan & Lupa Kata Sandi) sudah punya nilai bawaan di
-> `src/lib/config.ts`. Untuk menggantinya tanpa ubah kode, set env `NEXT_PUBLIC_ADMIN_WHATSAPP`
-> (format `62…`) lalu redeploy.
+> `src/lib/config.ts`. Untuk menggantinya tanpa ubah kode, set env `ADMIN_WHATSAPP`
+> (format `62…`, **tanpa** prefix `NEXT_PUBLIC_`) lalu redeploy.
 
 ### Lupa kata sandi (reset manual)
 

@@ -13,7 +13,7 @@
 ## 🟡 Sebelum production
 
 0. **Env var baru** (lihat `.env.example` + `DEPLOY.md`):
-   - `NEXT_PUBLIC_ADMIN_WHATSAPP` — nomor admin (format `62…`) untuk menu Bantuan / Tanya Admin
+   - `ADMIN_WHATSAPP` — nomor admin (format `62…`) untuk menu Bantuan / Tanya Admin
      dan halaman Lupa Kata Sandi.
    - Lupa Password: **reset manual** oleh admin lewat `scripts/set-password.ts` (tidak ada email otomatis).
 1. **Verifikasi visual di browser** — smoke test cuma cek "tidak error + konten muncul". Belum ada mata
