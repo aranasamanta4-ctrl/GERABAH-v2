@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentBusiness } from "@/lib/current-user";
 import { advanceOrderStatus, recordOrderPayment } from "@/lib/actions/orders";
 import { formatIDR, formatDateLong, invoiceNumber } from "@/lib/format";
+import { waUrl, reminderMessage } from "@/lib/whatsapp";
 import { ORDER_STATUS_FLOW, orderStatusLabel, orderStatusTone, paymentStatusLabel, paymentStatusTone } from "@/lib/labels";
 import { PageHeader } from "@/components/page-header";
 import { Card, Badge, List, Row, Callout } from "@/components/ui";
@@ -24,13 +25,20 @@ export default async function OrderDetailPage({ params }: PageProps<"/orders/[id
   if (!order) notFound();
 
   const number = invoiceNumber("ORD", order.id, order.date);
-  const item = order.items[0];
   const stepIndex = ORDER_STATUS_FLOW.indexOf(order.status as (typeof ORDER_STATUS_FLOW)[number]);
   const nextStatus = stepIndex >= 0 && stepIndex < ORDER_STATUS_FLOW.length - 1 ? ORDER_STATUS_FLOW[stepIndex + 1] : null;
   const done = order.status === "Completed";
   const cancelled = order.status === "Cancelled";
   const active = !done && !cancelled;
-  const stockShort = nextStatus === "Completed" && item && item.quantity > item.product.stock;
+
+  const qtyByProduct = new Map<string, { name: string; need: number; stock: number }>();
+  for (const it of order.items) {
+    const e = qtyByProduct.get(it.productId) ?? { name: it.product.name, need: 0, stock: it.product.stock };
+    e.need += it.quantity;
+    qtyByProduct.set(it.productId, e);
+  }
+  const shortItems = [...qtyByProduct.values()].filter((e) => e.need > e.stock);
+  const stockShort = nextStatus === "Completed" && shortItems.length > 0;
 
   return (
     <>
@@ -103,8 +111,9 @@ export default async function OrderDetailPage({ params }: PageProps<"/orders/[id
       {stockShort && (
         <div className="mb-3">
           <Callout tone="warn">
-            Stok {item.product.name} tinggal {item.product.stock}, pesanan butuh {item.quantity}. Tambah stok dulu di
-            halaman Produk sebelum menyelesaikan pesanan.
+            Stok belum cukup untuk menyelesaikan pesanan:{" "}
+            {shortItems.map((e) => `${e.name} (ada ${e.stock}, butuh ${e.need})`).join(", ")}. Tambah stok dulu di
+            halaman Produk.
           </Callout>
         </div>
       )}
@@ -132,6 +141,28 @@ export default async function OrderDetailPage({ params }: PageProps<"/orders/[id
             </ActionButton>
           )}
 
+          {order.remainingPayment > 0 && order.customer?.phone && (
+            <a
+              href={
+                waUrl(
+                  order.customer.phone,
+                  reminderMessage({
+                    businessName: business.name,
+                    customerName: order.customer.name,
+                    amount: order.remainingPayment,
+                    dueDate: order.dueDate,
+                    ref: number,
+                  })
+                ) ?? undefined
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-secondary w-full"
+            >
+              Hubungi Pembeli (WhatsApp)
+            </a>
+          )}
+
           {order.remainingPayment > 0 && (
             <ActionForm
               action={recordOrderPayment}
@@ -143,7 +174,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/orders/[id
                 </SubmitButton>
               }
             >
-              <span className="text-[13px] font-medium text-ink-2">Terima pembayaran</span>
+              <span className="text-[14px] font-medium text-ink-2">Terima pembayaran</span>
               <MoneyInput name="amount" placeholder="0" />
             </ActionForm>
           )}

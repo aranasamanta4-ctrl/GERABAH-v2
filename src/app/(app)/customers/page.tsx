@@ -22,10 +22,10 @@ export default async function CustomersPage() {
     <>
       <header className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[24px] font-bold text-ink">Pelanggan</h1>
-          <p className="mt-0.5 text-[13.5px] text-ink-2">Riwayat belanja dan piutang</p>
+          <h1 className="text-[25px] font-bold text-ink">Pelanggan</h1>
+          <p className="mt-0.5 text-[14px] text-ink-2">Riwayat belanja dan piutang</p>
         </div>
-        <Link href="/customers/new" className="btn btn-primary !min-h-[40px] !px-3.5">
+        <Link href="/customers/new" className="btn btn-primary !min-h-[44px] !px-4">
           <IconPlus className="h-4 w-4" strokeWidth={2.4} />
           Baru
         </Link>

@@ -50,7 +50,7 @@ export function StockAdjuster({ productId, stock }: { productId: string; stock: 
           }
         >
           <label className="block flex-1">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Jumlah stok</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Jumlah stok</span>
             <input name="value" type="number" inputMode="numeric" min={0} defaultValue={stock} className="field tnum" autoFocus />
           </label>
         </ActionForm>

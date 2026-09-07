@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getCurrentBusiness } from "@/lib/current-user";
+import { getSessionContext } from "@/lib/current-user";
 import { resolveRange, previousRange, daysFromNow, cashflowBuckets } from "@/lib/date-range";
 import { formatIDR, formatIDRCompact, formatDate } from "@/lib/format";
 import { orderStatusLabel } from "@/lib/labels";
@@ -24,8 +24,10 @@ function pctChange(cur: number, prev: number) {
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const { range } = await searchParams;
   const activeRange = typeof range === "string" ? range : "month";
-  const business = await getCurrentBusiness();
-  if (!business) return null;
+  const ctx = await getSessionContext();
+  if (!ctx?.business) return null;
+  const business = ctx.business;
+  const isStaff = ctx.role === "staff";
 
   const { from, to, label } = resolveRange(activeRange);
   const prev = previousRange(from, to);
@@ -93,11 +95,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   );
 
   const insights: string[] = [];
-  if (prevIncome > 0) {
+  if (!isStaff && prevIncome > 0) {
     const d = pctChange(income, prevIncome);
     insights.push(`Uang masuk ${d >= 0 ? "naik" : "turun"} ${Math.abs(d).toFixed(0)}% dari periode sebelumnya.`);
   }
-  if (profit < 0) insights.push("Pengeluaran lebih besar dari pemasukan periode ini. Cek biaya produksi.");
+  if (!isStaff && profit < 0) insights.push("Pengeluaran lebih besar dari pemasukan periode ini. Cek biaya produksi.");
   if (topProducts.length > 0) insights.push(`${topProducts[0][0]} paling banyak menghasilkan uang periode ini.`);
   if (outstandingOrders.length > 0)
     insights.push(`${outstandingOrders.length} pesanan belum lunas, total ${formatIDR(outstandingAmount)}.`);
@@ -109,7 +111,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     <>
       <header className="mb-5">
         <p className="label">{label}</p>
-        <h1 className="mt-1 text-[24px] font-bold text-ink">{business.name}</h1>
+        <h1 className="mt-1 text-[25px] font-bold text-ink">{business.name}</h1>
       </header>
 
       <div className="mb-4">
@@ -130,11 +132,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       ) : (
         <>
           <Card className="mb-3">
-            <p className="label">{profit >= 0 ? "Untung" : "Rugi"} {label.toLowerCase()}</p>
-            <p className={`figure mt-1.5 truncate text-[clamp(30px,10vw,40px)] ${profit >= 0 ? "text-ink" : "text-bad"}`}>
-              {formatIDR(profit)}
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3.5">
+            {!isStaff && (
+              <>
+                <p className="label">{profit >= 0 ? "Untung" : "Rugi"} {label.toLowerCase()}</p>
+                <p className={`figure mt-1.5 truncate text-[clamp(30px,10vw,40px)] ${profit >= 0 ? "text-ink" : "text-bad"}`}>
+                  {formatIDR(profit)}
+                </p>
+              </>
+            )}
+            {isStaff && <p className="label">Uang usaha {label.toLowerCase()}</p>}
+            <div
+              className={`grid grid-cols-2 gap-3 ${isStaff ? "mt-2" : "mt-4 border-t border-line pt-3.5"}`}
+            >
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-soft text-teal">
                   <IconArrowDown className="h-4 w-4" strokeWidth={2.2} />
@@ -162,7 +171,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
               label="Belum Lunas"
               value={formatIDRCompact(outstandingAmount)}
               tone={outstandingAmount > 0 ? "out" : "ink"}
-              href="/orders"
+              href="/receivables"
             />
             <Stat
               label="Stok Menipis"

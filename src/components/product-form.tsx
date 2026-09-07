@@ -64,11 +64,11 @@ export function ProductForm({
         <div className="flex flex-col gap-4">
           <PhotoInput current={initial.photoUrl} />
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Nama produk</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Nama produk</span>
             <input name="name" required defaultValue={initial.name} className="field" placeholder="mis. Vas Bunga Motif Batik" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Kategori</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Kategori</span>
             <input name="category" list="prodcat" defaultValue={initial.category ?? ""} className="field" placeholder="Pilih atau ketik baru" />
             <datalist id="prodcat">
               {categories.map((c) => (
@@ -77,18 +77,18 @@ export function ProductForm({
             </datalist>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Bahan (opsional)</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Bahan (opsional)</span>
             <input name="material" defaultValue={initial.material ?? ""} className="field" placeholder="mis. Tanah liat Plered, glasir bening" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Deskripsi (opsional)</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Deskripsi (opsional)</span>
             <textarea name="description" rows={2} defaultValue={initial.description ?? ""} className="field" />
           </label>
         </div>
       </Card>
 
       <Card>
-        <span className="mb-2 block text-[13px] font-medium text-ink-2">Harga jual</span>
+        <span className="mb-2 block text-[14px] font-medium text-ink-2">Harga jual</span>
         <input type="hidden" name="sellingPrice" value={price || ""} readOnly />
         <div className="relative">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[22px] font-semibold text-ink-3">Rp</span>
@@ -150,12 +150,12 @@ export function ProductForm({
         <div className="grid grid-cols-2 gap-3">
           {!isEdit && (
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Stok awal</span>
+              <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Stok awal</span>
               <input name="stock" type="number" inputMode="numeric" min={0} defaultValue={initial.stock ?? 0} className="field tnum" />
             </label>
           )}
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Batas stok menipis</span>
+            <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Batas stok menipis</span>
             <input name="minStock" type="number" inputMode="numeric" min={0} defaultValue={initial.minStock ?? 0} className="field tnum" />
           </label>
         </div>

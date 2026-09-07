@@ -23,10 +23,10 @@ export default async function SalesPage() {
     <>
       <header className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[24px] font-bold text-ink">Penjualan</h1>
-          <p className="mt-0.5 text-[13.5px] text-ink-2">Barang yang sudah terjual</p>
+          <h1 className="text-[25px] font-bold text-ink">Penjualan</h1>
+          <p className="mt-0.5 text-[14px] text-ink-2">Barang yang sudah terjual</p>
         </div>
-        <Link href="/sales/new" className="btn btn-primary !min-h-[40px] !px-3.5">
+        <Link href="/sales/new" className="btn btn-primary !min-h-[44px] !px-4">
           <IconPlus className="h-4 w-4" strokeWidth={2.4} />
           Baru
         </Link>

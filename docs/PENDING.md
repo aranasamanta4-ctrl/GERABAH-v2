@@ -12,8 +12,14 @@
 
 ## 🟡 Sebelum production
 
+0. **Env var baru** (lihat `.env.example` + `DEPLOY.md`):
+   - `NEXT_PUBLIC_ADMIN_WHATSAPP` — nomor admin (format `62…`) untuk menu Bantuan / Tanya Admin
+     dan halaman Lupa Kata Sandi.
+   - Lupa Password: **reset manual** oleh admin lewat `scripts/set-password.ts` (tidak ada email otomatis).
 1. **Verifikasi visual di browser** — smoke test cuma cek "tidak error + konten muncul". Belum ada mata
    manusia yang melihat tata letaknya di HP asli. Buka `npm run dev` → daftar → coba tiap alur.
+   Alur baru yang perlu dicek: Lupa Password, tambah/hapus Staf di Pengaturan, login sebagai Staf,
+   halaman Belum Lunas + tombol WhatsApp, kalkulator Workshop, unduh Laporan PDF.
 2. **Upload foto/video** — `src/lib/upload.ts` simpan ke `public/uploads/` (disk). Tidak permanen di
    Vercel serverless. Pindah ke **Supabase Storage**.
 3. **`AUTH_SECRET` di Vercel** — set env var-nya (nilainya ada di `KREDENSIAL-JANGAN-COMMIT.txt`), plus

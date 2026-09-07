@@ -39,8 +39,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   return (
     <>
       <header className="mb-5">
-        <h1 className="text-[24px] font-bold text-ink">Keuangan</h1>
-        <p className="mt-0.5 text-[13.5px] text-ink-2">Semua uang masuk dan keluar usaha</p>
+        <h1 className="text-[25px] font-bold text-ink">Keuangan</h1>
+        <p className="mt-0.5 text-[14px] text-ink-2">Semua uang masuk dan keluar usaha</p>
       </header>
 
       <Card className="mb-4">

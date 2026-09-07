@@ -18,9 +18,15 @@ model User {
   email        String   @unique
   phone        String?
   passwordHash String
+  role         String   @default("owner") // owner / staff
   createdAt    DateTime @default(now())
 
   businesses Business[]
+
+  memberOfBusinessId String?
+  memberOf           Business? @relation("BusinessStaff", fields: [memberOfBusinessId], references: [id], onDelete: Cascade)
+
+  @@index([memberOfBusinessId])
 }
 
 model Business {
@@ -33,6 +39,7 @@ model Business {
   categoryDefault String   @default("Gerabah / Keramik")
   createdAt       DateTime @default(now())
 
+  staff                 User[]     @relation("BusinessStaff")
   customers             Customer[]
   productCategories     ProductCategory[]
   expenseCategories     ExpenseCategory[]

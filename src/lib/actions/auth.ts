@@ -6,12 +6,18 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword, createSession, destroySession } from "@/lib/auth";
 import { type FormState, run } from "./_helpers";
 
-const signupSchema = z.object({
-  name: z.string().trim().min(1, "Isi namamu."),
-  email: z.string().trim().toLowerCase().email("Email tidak valid."),
-  phone: z.string().trim().optional(),
-  password: z.string().min(8, "Kata sandi minimal 8 karakter."),
-});
+const signupSchema = z
+  .object({
+    name: z.string().trim().min(1, "Isi namamu."),
+    email: z.string().trim().toLowerCase().email("Email tidak valid."),
+    phone: z.string().trim().optional(),
+    password: z.string().min(8, "Kata sandi minimal 8 karakter."),
+    confirmPassword: z.string().min(1, "Ulangi kata sandinya."),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Konfirmasi kata sandi tidak sama.",
+    path: ["confirmPassword"],
+  });
 
 export async function signup(_prev: FormState, formData: FormData): Promise<FormState> {
   const res = await run(async () => {
@@ -20,6 +26,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
       email: formData.get("email"),
       phone: formData.get("phone"),
       password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
     });
     if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Data tidak valid.");
 
@@ -55,7 +62,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     }
     await createSession(user.id);
     const business = await prisma.business.findFirst({ where: { ownerId: user.id } });
-    target = business ? "/dashboard" : "/onboarding";
+    target = business || user.memberOfBusinessId ? "/dashboard" : "/onboarding";
   });
 
   if (res.error) return res;

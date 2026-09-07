@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentBusiness } from "@/lib/current-user";
 import { markSalePaid } from "@/lib/actions/sales";
 import { formatIDR, formatDateLong, invoiceNumber } from "@/lib/format";
+import { waUrl, reminderMessage } from "@/lib/whatsapp";
 import { paymentStatusLabel, paymentStatusTone } from "@/lib/labels";
 import { PageHeader } from "@/components/page-header";
 import { Card, Badge, List, Row } from "@/components/ui";
@@ -72,7 +73,27 @@ export default async function SaleDetailPage({ params }: PageProps<"/sales/[id]"
       </Card>
 
       {sale.outstandingBalance > 0 && (
-        <div className="mb-3">
+        <div className="mb-3 flex flex-col gap-2.5">
+          {sale.customer?.phone && (
+            <a
+              href={
+                waUrl(
+                  sale.customer.phone,
+                  reminderMessage({
+                    businessName: business.name,
+                    customerName: sale.customer.name,
+                    amount: sale.outstandingBalance,
+                    ref: number,
+                  })
+                ) ?? undefined
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-secondary w-full"
+            >
+              Hubungi Pembeli (WhatsApp)
+            </a>
+          )}
           <ActionButton
             action={markSalePaid}
             hidden={{ id: sale.id }}

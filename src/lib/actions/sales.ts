@@ -11,6 +11,8 @@ import {
   findOrCreatePaymentMethod,
   salesIncomeCategoryId,
   parseAmount,
+  parseItems,
+  sumQtyByProduct,
 } from "./_helpers";
 
 export async function createSale(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -18,10 +20,8 @@ export async function createSale(_prev: FormState, formData: FormData): Promise<
   let newId = "";
 
   const res = await run(async () => {
-    const productId = String(formData.get("productId") ?? "");
+    const items = parseItems(formData.get("items"));
     const customerId = String(formData.get("customerId") ?? "") || null;
-    const quantity = Number(formData.get("quantity") ?? 0) || 0;
-    const unitPrice = parseAmount(formData.get("unitPrice"));
     const discount = parseAmount(formData.get("discount"));
     const channelName = String(formData.get("channel") ?? "");
     const paymentMethodName = String(formData.get("paymentMethod") ?? "");
@@ -30,20 +30,35 @@ export async function createSale(_prev: FormState, formData: FormData): Promise<
     const notes = String(formData.get("notes") ?? "").trim();
     const dateValue = String(formData.get("date") ?? "");
 
-    if (!productId) throw new Error("Pilih produk yang dijual.");
-    if (quantity <= 0) throw new Error("Isi jumlah barangnya.");
+    if (items.length === 0) throw new Error("Pilih minimal satu barang yang dijual.");
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product || product.businessId !== business.id) throw new Error("Produk tidak ditemukan.");
-    if (quantity > product.stock) throw new Error(`Stok tidak cukup — tersisa ${product.stock}.`);
+    const products = await prisma.product.findMany({
+      where: { id: { in: [...new Set(items.map((i) => i.productId))] }, businessId: business.id },
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+    if (byId.size !== new Set(items.map((i) => i.productId)).size) throw new Error("Ada produk yang tidak ditemukan.");
 
-    const price = unitPrice > 0 ? unitPrice : product.sellingPrice;
-    const subtotal = quantity * price;
+    for (const [productId, qty] of sumQtyByProduct(items)) {
+      const p = byId.get(productId)!;
+      if (qty > p.stock) throw new Error(`Stok ${p.name} tidak cukup — tersisa ${p.stock}, dibutuhkan ${qty}.`);
+    }
+
+    const lineItems = items.map((i) => {
+      const p = byId.get(i.productId)!;
+      const price = i.unitPrice > 0 ? i.unitPrice : p.sellingPrice;
+      return { productId: i.productId, quantity: i.quantity, unitPrice: price, lineTotal: i.quantity * price };
+    });
+
+    const subtotal = lineItems.reduce((s, i) => s + i.lineTotal, 0);
     const total = Math.max(subtotal - discount, 0);
     const amountPaid =
       paymentStatus === "Paid" ? total : paymentStatus === "Unpaid" ? 0 : Math.min(amountPaidInput, total);
     const outstandingBalance = total - amountPaid;
     const when = dateValue ? new Date(dateValue) : new Date();
+
+    const firstName = byId.get(items[0].productId)!.name;
+    const description =
+      items.length === 1 ? `Penjualan ${firstName}` : `Penjualan ${firstName} + ${items.length - 1} barang lain`;
 
     const [channelId, paymentMethodId, incomeCategoryId] = await Promise.all([
       channelName ? findOrCreateChannel(business.id, channelName) : Promise.resolve(null),
@@ -66,17 +81,20 @@ export async function createSale(_prev: FormState, formData: FormData): Promise<
           paymentStatus,
           paymentMethodId: paymentMethodId ?? undefined,
           notes: notes || undefined,
-          items: { create: [{ productId, quantity, unitPrice: price, lineTotal: subtotal }] },
+          items: { create: lineItems },
         },
       });
 
-      await tx.product.update({
-        where: { id: productId },
-        data: {
-          stock: { decrement: quantity },
-          status: product.stock - quantity <= 0 ? "out_of_stock" : "active",
-        },
-      });
+      for (const [productId, qty] of sumQtyByProduct(items)) {
+        const p = byId.get(productId)!;
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            stock: { decrement: qty },
+            status: p.stock - qty <= 0 ? "out_of_stock" : "active",
+          },
+        });
+      }
 
       if (amountPaid > 0) {
         await tx.financialTransaction.create({
@@ -84,7 +102,7 @@ export async function createSale(_prev: FormState, formData: FormData): Promise<
             businessId: business.id,
             type: "INCOME",
             incomeCategoryId,
-            description: `Penjualan ${product.name}`,
+            description,
             amount: amountPaid,
             paymentMethodId: paymentMethodId ?? undefined,
             relatedSaleId: created.id,

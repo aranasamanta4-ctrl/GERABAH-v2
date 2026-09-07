@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getCurrentBusiness } from "@/lib/current-user";
+import { getCurrentBusiness, getCurrentUser } from "@/lib/current-user";
 import { createBusiness } from "@/lib/actions/business";
 import { AuthShell } from "@/components/auth-shell";
 import { ActionForm, SubmitButton } from "@/components/form";
@@ -9,6 +9,8 @@ import { Callout } from "@/components/ui";
 export default async function OnboardingPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+  const currentUser = await getCurrentUser();
+  if (currentUser?.memberOfBusinessId) redirect("/dashboard");
   if (await getCurrentBusiness()) redirect("/dashboard");
 
   return (
@@ -18,15 +20,15 @@ export default async function OnboardingPage() {
         footer={<SubmitButton pendingLabel="Menyiapkan…">Mulai Mencatat</SubmitButton>}
       >
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Nama usaha</span>
+          <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Nama usaha</span>
           <input name="name" required autoFocus className="field" placeholder="mis. Gerabah Bu Siti" />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Lokasi (opsional)</span>
+          <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Lokasi (opsional)</span>
           <input name="location" className="field" placeholder="Desa / Kecamatan / Kabupaten" />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Keterangan singkat (opsional)</span>
+          <span className="mb-1.5 block text-[14px] font-medium text-ink-2">Keterangan singkat (opsional)</span>
           <textarea name="description" rows={2} className="field" placeholder="Apa saja yang dibuat dan dijual" />
         </label>
         <Callout>

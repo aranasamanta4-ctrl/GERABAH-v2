@@ -54,8 +54,8 @@ export function Stat({
   const body = (
     <>
       <p className="label truncate">{label}</p>
-      <p className={`figure mt-2 truncate text-[19px] ${TEXT_TONE[tone]}`}>{value}</p>
-      {sub && <p className="mt-1 truncate text-[11.5px] text-ink-3">{sub}</p>}
+      <p className={`figure mt-2 truncate text-[20px] ${TEXT_TONE[tone]}`}>{value}</p>
+      {sub && <p className="mt-1 truncate text-[12px] text-ink-3">{sub}</p>}
     </>
   );
   const cls = "card min-w-0 overflow-hidden p-3.5";
@@ -80,7 +80,7 @@ const BADGE = {
 export function Badge({ tone = "neutral", children }: { tone?: keyof typeof BADGE; children: ReactNode }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${BADGE[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold ${BADGE[tone]}`}
     >
       {children}
     </span>
@@ -119,13 +119,13 @@ export function Row({
     <>
       {leading}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-medium text-ink">{title}</p>
-        {meta && <p className="mt-0.5 truncate text-[12.5px] text-ink-3">{meta}</p>}
+        <p className="truncate text-[16px] font-medium text-ink">{title}</p>
+        {meta && <p className="mt-0.5 truncate text-[13px] text-ink-3">{meta}</p>}
       </div>
       {amount != null && (
         <div className="shrink-0 text-right">
-          <p className={`tnum text-[15px] font-semibold ${TEXT_TONE[amountTone]}`}>{amount}</p>
-          {amountSub && <p className="tnum text-[11.5px] text-ink-3">{amountSub}</p>}
+          <p className={`tnum text-[16px] font-semibold ${TEXT_TONE[amountTone]}`}>{amount}</p>
+          {amountSub && <p className="tnum text-[12px] text-ink-3">{amountSub}</p>}
         </div>
       )}
       {trailing}
@@ -170,8 +170,8 @@ export function EmptyState({
           {icon}
         </div>
       )}
-      <p className="text-[17px] font-semibold text-ink">{title}</p>
-      <p className="mx-auto mt-1.5 max-w-xs text-[13.5px] leading-relaxed text-ink-2">{body}</p>
+      <p className="text-[18px] font-semibold text-ink">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-xs text-[14.5px] leading-relaxed text-ink-2">{body}</p>
       {actionLabel && actionHref && (
         <Link href={actionHref} className="btn btn-primary mt-5">
           {actionLabel}
@@ -187,7 +187,7 @@ export function Callout({ children, tone = "neutral" }: { children: ReactNode; t
     tone === "warn"
       ? "bg-warn-soft text-warn"
       : "bg-surface-2 text-ink-2";
-  return <p className={`rounded-[var(--radius-md)] px-4 py-3 text-[13px] leading-relaxed ${cls}`}>{children}</p>;
+  return <p className={`rounded-[var(--radius-md)] px-4 py-3 text-[14px] leading-relaxed ${cls}`}>{children}</p>;
 }
 
 /* ── Field label wrapper ── */
@@ -202,9 +202,9 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-ink-2">{label}</span>
+      <span className="mb-1.5 block text-[14px] font-medium text-ink-2">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11.5px] text-ink-3">{hint}</span>}
+      {hint && <span className="mt-1 block text-[12.5px] text-ink-3">{hint}</span>}
     </label>
   );
 }

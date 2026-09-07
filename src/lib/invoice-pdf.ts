@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { formatIDRPlain, formatDateLong } from "@/lib/format";
+import { san, wrap } from "@/lib/pdf-kit";
 
 export type InvoiceItem = {
   name: string;
@@ -40,17 +41,6 @@ const BAND = rgb(0.957, 0.925, 0.886);
 const ACCENT = rgb(0.76, 0.255, 0.047);
 const SAGE = rgb(0.016, 0.47, 0.341);
 
-// Helvetica is WinAnsi-encoded: fold typographic punctuation and drop anything above Latin-1.
-function san(input: string) {
-  return input
-    .replace(/[‘’‛]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[–—]/g, "-")
-    .replace(/•/g, "-")
-    .replace(/…/g, "...")
-    .replace(/ /g, " ")
-    .replace(/[^\x20-\xFF]/g, "");
-}
 
 const UNITS = [
   "",
@@ -85,23 +75,6 @@ export function terbilang(amount: number): string {
   if (n === 0) return "Nol rupiah";
   const words = spell(n).replace(/\s+/g, " ").trim();
   return `${words.charAt(0).toUpperCase()}${words.slice(1)} rupiah`;
-}
-
-function wrap(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = san(text).split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
-      line = candidate;
-    } else {
-      if (line) lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
-  return lines.length ? lines : [""];
 }
 
 export async function buildInvoicePdf(data: InvoiceData): Promise<Uint8Array> {

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
-import { IconAlert } from "./icons";
+import { IconAlert, IconCheck } from "./icons";
 import type { FormState } from "@/lib/actions/_helpers";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -12,14 +12,16 @@ export function SubmitButton({
   children,
   className = "btn btn-primary w-full",
   pendingLabel,
+  disabled = false,
 }: {
   children: ReactNode;
   className?: string;
   pendingLabel?: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={className} aria-busy={pending}>
+    <button type="submit" disabled={pending || disabled} className={className} aria-busy={pending}>
       {pending ? pendingLabel ?? "Menyimpan…" : children}
     </button>
   );
@@ -50,9 +52,15 @@ export function ActionForm({
         Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       {children}
       {state.error && (
-        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-bad-soft px-3.5 py-3 text-[13px] font-medium text-bad">
+        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-bad-soft px-3.5 py-3 text-[13.5px] font-medium text-bad">
           <IconAlert className="mt-px h-4 w-4 shrink-0" strokeWidth={2} />
           <span>{state.error}</span>
+        </div>
+      )}
+      {state.message && !state.error && (
+        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-good-soft px-3.5 py-3 text-[13.5px] font-medium text-good">
+          <IconCheck className="mt-px h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span>{state.message}</span>
         </div>
       )}
       {footer}

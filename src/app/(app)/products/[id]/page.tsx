@@ -40,8 +40,9 @@ export default async function ProductDetailPage({ params }: PageProps<"/products
         back="/products"
         action={
           !archived && (
-            <Link href={`/products/${id}/edit`} className="btn btn-secondary !min-h-[40px] !px-3">
+            <Link href={`/products/${id}/edit`} className="btn btn-secondary !min-h-[42px] !px-4">
               <IconEdit className="h-4 w-4" strokeWidth={2} />
+              Ubah
             </Link>
           )
         }

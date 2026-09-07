@@ -202,3 +202,42 @@ export const IconSettings = (p: P) => (
     <path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
   </Icon>
 );
+
+export const IconEye = (p: P) => (
+  <Icon {...p}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+
+export const IconEyeOff = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.3 4" />
+    <path d="M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.4-1.1" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </Icon>
+);
+
+export const IconHelp = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.2 9.2a2.8 2.8 0 0 1 5.3 1c0 1.9-2.7 2.5-2.7 2.5" />
+    <path d="M12 17h.01" />
+  </Icon>
+);
+
+export const IconCalculator = (p: P) => (
+  <Icon {...p}>
+    <rect x="5" y="3" width="14" height="18" rx="2" />
+    <path d="M9 7h6" />
+    <path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h3.5" />
+  </Icon>
+);
+
+export const IconMessage = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 5h16v11H8l-4 4V5Z" />
+    <path d="M8 9h8M8 12h5" />
+  </Icon>
+);

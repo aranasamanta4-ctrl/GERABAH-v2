@@ -51,6 +51,8 @@
     background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 15.5px;
+    line-height: 1.5;
     letter-spacing: -0.012em;
     overscroll-behavior-y: none;
     text-rendering: optimizeLegibility;
@@ -102,11 +104,18 @@
   }
 
   .label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--color-ink-3);
+  }
+
+  /* Kalimat bantuan / penjelasan di bawah field atau judul */
+  .text-help {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--color-ink-2);
   }
 
   /* ── Buttons ── */
@@ -115,10 +124,10 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 46px;
-    padding: 0 1.15rem;
+    min-height: 52px;
+    padding: 0 1.25rem;
     border-radius: 999px;
-    font-size: 0.925rem;
+    font-size: 1rem;
     font-weight: 650;
     white-space: nowrap;
     transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
@@ -163,8 +172,8 @@
   /* ── Fields ── */
   .field {
     width: 100%;
-    min-height: 50px;
-    padding: 0.7rem 0.95rem;
+    min-height: 54px;
+    padding: 0.75rem 0.95rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-line-strong);
     background: var(--color-surface);
@@ -196,7 +205,7 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
   .h-tabbar {
-    height: calc(62px + env(safe-area-inset-bottom, 0px));
+    height: calc(66px + env(safe-area-inset-bottom, 0px));
   }
 }
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentBusiness } from "@/lib/current-user";
 import { formatIDR, formatDate } from "@/lib/format";
 import { customerTypeLabel, paymentStatusLabel, paymentStatusTone } from "@/lib/labels";
+import { waUrl } from "@/lib/whatsapp";
 import { PageHeader } from "@/components/page-header";
 import { Card, Avatar, Badge, List, Row, EmptyState } from "@/components/ui";
 import { IconEdit, IconReceipt } from "@/components/icons";
@@ -26,9 +27,7 @@ export default async function CustomerDetailPage({ params }: PageProps<"/custome
   const owed =
     customer.sales.reduce((s, x) => s + x.outstandingBalance, 0) +
     customer.orders.filter((o) => o.status !== "Cancelled").reduce((s, o) => s + o.remainingPayment, 0);
-  const waLink = customer.phone
-    ? `https://wa.me/${customer.phone.replace(/\D/g, "").replace(/^0/, "62")}`
-    : null;
+  const waLink = waUrl(customer.phone);
 
   return (
     <>
@@ -36,8 +35,9 @@ export default async function CustomerDetailPage({ params }: PageProps<"/custome
         title={customer.name}
         back="/customers"
         action={
-          <Link href={`/customers/${id}/edit`} className="btn btn-secondary !min-h-[40px] !px-3">
+          <Link href={`/customers/${id}/edit`} className="btn btn-secondary !min-h-[42px] !px-4">
             <IconEdit className="h-4 w-4" strokeWidth={2} />
+            Ubah
           </Link>
         }
       />

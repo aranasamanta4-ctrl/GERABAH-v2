@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { getCurrentBusiness } from "@/lib/current-user";
+import { getSessionContext } from "@/lib/current-user";
 import { resolveRange } from "@/lib/date-range";
 import { paymentStatusLabel } from "@/lib/labels";
 
@@ -13,8 +13,10 @@ function csvEscape(value: string | number) {
 export async function GET(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Belum login." }, { status: 401 });
-  const business = await getCurrentBusiness();
-  if (!business) return NextResponse.json({ error: "Business tidak ditemukan." }, { status: 404 });
+  const ctx = await getSessionContext();
+  if (!ctx?.business) return NextResponse.json({ error: "Business tidak ditemukan." }, { status: 404 });
+  if (ctx.role !== "owner") return NextResponse.json({ error: "Hanya owner." }, { status: 403 });
+  const business = ctx.business;
 
   const { searchParams } = new URL(request.url);
   const periodParam = searchParams.get("period") ?? "month";

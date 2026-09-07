@@ -11,6 +11,7 @@ import {
   findOrCreateChannel,
   salesIncomeCategoryId,
   parseAmount,
+  parseItems,
 } from "./_helpers";
 
 export async function createOrder(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -18,24 +19,31 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   let newId = "";
 
   const res = await run(async () => {
-    const productId = String(formData.get("productId") ?? "");
+    const items = parseItems(formData.get("items"));
     const customerId = String(formData.get("customerId") ?? "") || null;
-    const quantity = Number(formData.get("quantity") ?? 0) || 0;
-    const price = parseAmount(formData.get("price"));
     const discount = parseAmount(formData.get("discount"));
     const downPayment = parseAmount(formData.get("downPayment"));
     const channelName = String(formData.get("channel") ?? "");
     const dueDateValue = String(formData.get("dueDate") ?? "");
     const notes = String(formData.get("notes") ?? "").trim();
 
-    if (!productId) throw new Error("Pilih produk yang dipesan.");
-    if (quantity <= 0) throw new Error("Isi jumlah barangnya.");
+    if (items.length === 0) throw new Error("Pilih minimal satu barang yang dipesan.");
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product || product.businessId !== business.id) throw new Error("Produk tidak ditemukan.");
+    const products = await prisma.product.findMany({
+      where: { id: { in: [...new Set(items.map((i) => i.productId))] }, businessId: business.id },
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+    if (byId.size !== new Set(items.map((i) => i.productId)).size) throw new Error("Ada produk yang tidak ditemukan.");
 
-    const unit = price > 0 ? price : product.sellingPrice;
-    const total = Math.max(quantity * unit - discount, 0);
+    const lineItems = items.map((i, idx) => {
+      const p = byId.get(i.productId)!;
+      const unit = i.unitPrice > 0 ? i.unitPrice : p.sellingPrice;
+      // diskon keseluruhan disimpan di baris pertama
+      return { productId: i.productId, quantity: i.quantity, price: unit, discount: idx === 0 ? discount : 0 };
+    });
+
+    const gross = lineItems.reduce((s, i) => s + i.quantity * i.price, 0);
+    const total = Math.max(gross - discount, 0);
     const remainingPayment = Math.max(total - downPayment, 0);
     const paymentStatus = remainingPayment <= 0 ? "Paid" : downPayment > 0 ? "Partially Paid" : "Unpaid";
     const channelId = channelName ? await findOrCreateChannel(business.id, channelName) : null;
@@ -52,7 +60,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
         total,
         dueDate: dueDateValue ? new Date(dueDateValue) : undefined,
         notes: notes || undefined,
-        items: { create: [{ productId, quantity, price: unit, discount }] },
+        items: { create: lineItems },
       },
     });
     newId = order.id;
@@ -98,13 +106,26 @@ async function completeOrderInner(orderId: string) {
   if (!order) throw new Error("Pesanan tidak ditemukan.");
   if (order.items.length === 0) throw new Error("Pesanan tidak punya item.");
 
-  const item = order.items[0];
-  if (item.quantity > item.product.stock) {
-    throw new Error(`Stok tidak cukup — tersisa ${item.product.stock}. Tambah stok dulu di halaman Produk.`);
+  const qtyByProduct = new Map<string, number>();
+  for (const it of order.items) qtyByProduct.set(it.productId, (qtyByProduct.get(it.productId) ?? 0) + it.quantity);
+
+  const productById = new Map(order.items.map((it) => [it.productId, it.product]));
+  for (const [productId, qty] of qtyByProduct) {
+    const p = productById.get(productId)!;
+    if (qty > p.stock) {
+      throw new Error(`Stok ${p.name} tidak cukup — tersisa ${p.stock}, dibutuhkan ${qty}. Tambah stok dulu.`);
+    }
   }
 
   const incomeCategoryId = await salesIncomeCategoryId(order.businessId);
   const amountReceived = order.total - order.remainingPayment;
+  const subtotal = order.items.reduce((s, it) => s + it.quantity * it.price, 0);
+  const discount = order.items.reduce((s, it) => s + it.discount, 0);
+  const firstName = order.items[0].product.name;
+  const description =
+    order.items.length === 1
+      ? `Penjualan ${firstName} (dari Pesanan)`
+      : `Penjualan ${firstName} + ${order.items.length - 1} barang lain (dari Pesanan)`;
 
   await prisma.$transaction(async (tx) => {
     const sale = await tx.sale.create({
@@ -112,33 +133,34 @@ async function completeOrderInner(orderId: string) {
         businessId: order.businessId,
         customerId: order.customerId ?? undefined,
         channelId: order.channelId ?? undefined,
-        subtotal: item.quantity * item.price,
-        discount: item.discount,
+        subtotal,
+        discount,
         total: order.total,
         amountPaid: amountReceived,
         outstandingBalance: order.remainingPayment,
         paymentStatus: order.paymentStatus,
         orderId: order.id,
         items: {
-          create: [
-            {
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: item.price,
-              lineTotal: item.quantity * item.price,
-            },
-          ],
+          create: order.items.map((it) => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPrice: it.price,
+            lineTotal: it.quantity * it.price,
+          })),
         },
       },
     });
 
-    await tx.product.update({
-      where: { id: item.productId },
-      data: {
-        stock: { decrement: item.quantity },
-        status: item.product.stock - item.quantity <= 0 ? "out_of_stock" : "active",
-      },
-    });
+    for (const [productId, qty] of qtyByProduct) {
+      const p = productById.get(productId)!;
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          stock: { decrement: qty },
+          status: p.stock - qty <= 0 ? "out_of_stock" : "active",
+        },
+      });
+    }
 
     if (amountReceived > 0) {
       await tx.financialTransaction.create({
@@ -146,7 +168,7 @@ async function completeOrderInner(orderId: string) {
           businessId: order.businessId,
           type: "INCOME",
           incomeCategoryId,
-          description: `Penjualan ${item.product.name} (dari Pesanan)`,
+          description,
           amount: amountReceived,
           relatedSaleId: sale.id,
         },
