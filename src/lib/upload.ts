@@ -44,6 +44,8 @@ export async function saveUploadedFile(file: File | null): Promise<string | null
       method: "POST",
       headers: {
         Authorization: `Bearer ${SERVICE_KEY}`,
+        // Supabase Storage butuh apikey juga (baik key lama service_role maupun baru sb_secret_).
+        apikey: SERVICE_KEY,
         "Content-Type": file.type,
         "x-upsert": "true",
         "cache-control": "public, max-age=31536000, immutable",
