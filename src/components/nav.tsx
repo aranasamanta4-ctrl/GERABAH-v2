@@ -17,6 +17,7 @@ import {
   IconArrowUp,
   IconCalculator,
   IconHelp,
+  IconClock,
 } from "./icons";
 
 type Role = "owner" | "staff";
@@ -37,8 +38,9 @@ const ALL: Item[] = [
   { href: "/orders", label: "Pesanan", icon: IconClipboard },
   { href: "/receivables", label: "Belum Lunas", icon: IconWallet },
   { href: "/customers", label: "Pelanggan", icon: IconUsers },
-  { href: "/workshop", label: "Hitung Workshop", icon: IconCalculator },
+  { href: "/workshop", label: "Workshop", icon: IconCalculator },
   { href: "/reports", label: "Laporan", icon: IconChart, ownerOnly: true },
+  { href: "/activity", label: "Log Aktivitas", icon: IconClock, ownerOnly: true },
   { href: "/help", label: "Bantuan", icon: IconHelp },
   { href: "/settings", label: "Pengaturan", icon: IconSettings, ownerOnly: true },
 ];
@@ -58,7 +60,8 @@ const RECORD_ACTIONS = [
   { href: "/orders/new", label: "Pesanan", desc: "Pesanan yang dikerjakan dulu", icon: IconClipboard, tone: "neutral" },
 ] as const;
 
-function RecordSheet({ onClose }: { onClose: () => void }) {
+function RecordSheet({ onClose, role }: { onClose: () => void; role: Role }) {
+  const actions = role === "staff" ? RECORD_ACTIONS.filter((a) => a.label !== "Uang Masuk") : RECORD_ACTIONS;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -76,7 +79,7 @@ function RecordSheet({ onClose }: { onClose: () => void }) {
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-strong sm:hidden" />
         <p className="mb-3 px-1 text-[16px] font-bold text-ink">Mau catat apa?</p>
         <div className="flex flex-col gap-1.5">
-          {RECORD_ACTIONS.map((a) => (
+          {actions.map((a) => (
             <Link
               key={a.href}
               href={a.href}
@@ -113,7 +116,7 @@ export function TabBar({ role = "owner" }: { role?: Role }) {
 
   return (
     <>
-      {sheet && <RecordSheet onClose={() => setSheet(false)} />}
+      {sheet && <RecordSheet onClose={() => setSheet(false)} role={role} />}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-sm sm:hidden">
         <div className="mx-auto grid h-tabbar max-w-md grid-cols-5 items-start px-1 pt-1.5">
           {items.slice(0, 2).map((it) => (
@@ -178,9 +181,12 @@ export function Sidebar({ businessName, role = "owner" }: { businessName: string
           );
         })}
       </nav>
-      <Link href="/finance/new?type=INCOME" className="btn btn-primary mt-3">
+      <Link
+        href={role === "staff" ? "/finance/new?type=EXPENSE" : "/finance/new?type=INCOME"}
+        className="btn btn-primary mt-3"
+      >
         <IconPlus className="h-4 w-4" strokeWidth={2.4} />
-        Catat Uang Masuk
+        {role === "staff" ? "Catat Uang Keluar" : "Catat Uang Masuk"}
       </Link>
     </aside>
   );

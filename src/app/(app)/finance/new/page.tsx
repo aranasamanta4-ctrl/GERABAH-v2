@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getCurrentBusiness } from "@/lib/current-user";
+import { getSessionContext } from "@/lib/current-user";
 import { createFinancialTransaction } from "@/lib/actions/finance";
 import { todayISO } from "@/lib/date-range";
 import { PageHeader } from "@/components/page-header";
@@ -9,10 +9,12 @@ import { MoneyInput } from "@/components/money-input";
 
 export default async function NewFinancePage({ searchParams }: PageProps<"/finance/new">) {
   const { type } = await searchParams;
-  const business = await getCurrentBusiness();
-  if (!business) return null;
+  const ctx = await getSessionContext();
+  if (!ctx?.business) return null;
+  const business = ctx.business;
 
-  const isIncome = type === "INCOME";
+  // Staf tidak boleh mencatat uang masuk manual.
+  const isIncome = type === "INCOME" && ctx.role !== "staff";
   const txType = isIncome ? "INCOME" : "EXPENSE";
 
   const [incomeCategories, expenseCategories, paymentMethods] = await Promise.all([

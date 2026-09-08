@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { type FormState, run, requireBusiness } from "./_helpers";
+import { type FormState, run, requireBusiness, logActivity } from "./_helpers";
 
 function read(formData: FormData) {
   return {
@@ -39,6 +39,7 @@ export async function createCustomer(_prev: FormState, formData: FormData): Prom
       },
     });
     newId = customer.id;
+    await logActivity(business.id, "customer.create", `Tambah pelanggan ${d.name}${d.phone ? ` (${d.phone})` : ""}`);
   });
 
   if (res.error) return res;
@@ -66,6 +67,7 @@ export async function updateCustomer(_prev: FormState, formData: FormData): Prom
         notes: d.notes || null,
       },
     });
+    await logActivity(business.id, "customer.update", `Ubah data pelanggan ${d.name}`);
   });
 
   if (res.error) return res;

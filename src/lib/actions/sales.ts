@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { formatIDRPlain } from "@/lib/format";
 import {
   type FormState,
   run,
@@ -13,6 +14,7 @@ import {
   parseAmount,
   parseItems,
   sumQtyByProduct,
+  logActivity,
 } from "./_helpers";
 
 export async function createSale(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -113,6 +115,7 @@ export async function createSale(_prev: FormState, formData: FormData): Promise<
       return created;
     });
     newId = sale.id;
+    await logActivity(business.id, "sale.create", `Catat ${description.toLowerCase()} — ${formatIDRPlain(total)}`);
   });
 
   if (res.error) return res;
@@ -148,6 +151,7 @@ export async function markSalePaid(_prev: FormState, formData: FormData): Promis
         },
       }),
     ]);
+    await logActivity(business.id, "sale.paid", `Tandai penjualan lunas — pelunasan ${formatIDRPlain(remaining)}`);
   });
 
   if (res.error) return res;

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ORDER_STATUS_FLOW } from "@/lib/labels";
+import { ORDER_STATUS_FLOW, orderStatusLabel } from "@/lib/labels";
+import { formatIDRPlain } from "@/lib/format";
 import {
   type FormState,
   run,
@@ -12,6 +13,7 @@ import {
   salesIncomeCategoryId,
   parseAmount,
   parseItems,
+  logActivity,
 } from "./_helpers";
 
 export async function createOrder(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -64,6 +66,11 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
       },
     });
     newId = order.id;
+    await logActivity(
+      business.id,
+      "order.create",
+      `Buat pesanan ${byId.get(items[0].productId)!.name}${items.length > 1 ? ` + ${items.length - 1} barang lain` : ""} — ${formatIDRPlain(total)}`
+    );
   });
 
   if (res.error) return res;
@@ -73,7 +80,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
 }
 
 export async function advanceOrderStatus(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireBusiness();
+  const business = await requireBusiness();
   const orderId = String(formData.get("id") ?? "");
   const nextStatus = String(formData.get("status") ?? "");
 
@@ -81,11 +88,28 @@ export async function advanceOrderStatus(_prev: FormState, formData: FormData): 
     const valid = ORDER_STATUS_FLOW.includes(nextStatus as (typeof ORDER_STATUS_FLOW)[number]);
     if (!valid && nextStatus !== "Cancelled") throw new Error("Status tidak valid.");
 
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, businessId: business.id },
+      include: { customer: true },
+    });
+    if (!order) throw new Error("Pesanan tidak ditemukan.");
+
     if (nextStatus === "Completed") {
       await completeOrderInner(orderId);
     } else {
       await prisma.order.update({ where: { id: orderId }, data: { status: nextStatus } });
     }
+
+    const who = order.customer?.name ?? "tanpa nama";
+    await logActivity(
+      business.id,
+      "order.status",
+      nextStatus === "Cancelled"
+        ? `Batalkan pesanan ${who}`
+        : nextStatus === "Completed"
+          ? `Selesaikan pesanan ${who} (jadi penjualan)`
+          : `Ubah status pesanan ${who} → ${orderStatusLabel(nextStatus)}`
+    );
   });
 
   if (res.error) return res;
@@ -180,12 +204,12 @@ async function completeOrderInner(orderId: string) {
 }
 
 export async function recordOrderPayment(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireBusiness();
+  const business = await requireBusiness();
   const orderId = String(formData.get("orderId") ?? "");
 
   const res = await run(async () => {
     const amount = parseAmount(formData.get("amount"));
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true } });
     if (!order) throw new Error("Pesanan tidak ditemukan.");
     if (amount <= 0) throw new Error("Isi jumlah pembayaran.");
     if (amount > order.remainingPayment) throw new Error("Jumlah melebihi sisa tagihan.");
@@ -199,6 +223,11 @@ export async function recordOrderPayment(_prev: FormState, formData: FormData): 
         paymentStatus: newRemaining <= 0 ? "Paid" : "Partially Paid",
       },
     });
+    await logActivity(
+      business.id,
+      "order.payment",
+      `Catat pembayaran pesanan ${order.customer?.name ?? "tanpa nama"} — ${formatIDRPlain(amount)}`
+    );
   });
 
   if (res.error) return res;

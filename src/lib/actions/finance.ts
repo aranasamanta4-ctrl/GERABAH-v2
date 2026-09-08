@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSessionContext } from "@/lib/current-user";
+import { formatIDRPlain } from "@/lib/format";
 import {
   type FormState,
   run,
@@ -11,13 +13,18 @@ import {
   findOrCreateIncomeCategory,
   findOrCreateExpenseCategory,
   parseAmount,
+  logActivity,
 } from "./_helpers";
 
 export async function createFinancialTransaction(_prev: FormState, formData: FormData): Promise<FormState> {
   const business = await requireBusiness();
+  const ctx = await getSessionContext();
 
   const res = await run(async () => {
     const type = String(formData.get("type") ?? "EXPENSE") === "INCOME" ? "INCOME" : "EXPENSE";
+    if (type === "INCOME" && ctx?.role === "staff") {
+      throw new Error("Staf hanya bisa mencatat uang keluar. Uang masuk otomatis dari penjualan.");
+    }
     const categoryName = String(formData.get("category") ?? "");
     const description = String(formData.get("description") ?? "").trim();
     const amount = parseAmount(formData.get("amount"));
@@ -48,6 +55,13 @@ export async function createFinancialTransaction(_prev: FormState, formData: For
         date: dateValue ? new Date(dateValue) : new Date(),
       },
     });
+    await logActivity(
+      business.id,
+      type === "INCOME" ? "finance.income" : "finance.expense",
+      `Catat ${type === "INCOME" ? "uang masuk" : "uang keluar"} ${formatIDRPlain(amount)}${
+        description ? ` — ${description}` : categoryName ? ` — ${categoryName}` : ""
+      }`
+    );
   });
 
   if (res.error) return res;
@@ -65,6 +79,11 @@ export async function deleteFinancialTransaction(_prev: FormState, formData: For
     if (!tx || tx.businessId !== business.id) throw new Error("Catatan tidak ditemukan.");
     if (tx.relatedSaleId) throw new Error("Catatan ini dari penjualan — batalkan lewat halaman Penjualan.");
     await prisma.financialTransaction.delete({ where: { id } });
+    await logActivity(
+      business.id,
+      "finance.delete",
+      `Hapus catatan ${tx.type === "INCOME" ? "uang masuk" : "uang keluar"} ${formatIDRPlain(tx.amount)}`
+    );
   });
 
   if (res.error) return res;

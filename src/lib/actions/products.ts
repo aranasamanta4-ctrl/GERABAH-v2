@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
-import { type FormState, run, requireBusiness, findOrCreateProductCategory, parseAmount } from "./_helpers";
+import { formatIDRPlain } from "@/lib/format";
+import { type FormState, run, requireBusiness, findOrCreateProductCategory, parseAmount, logActivity } from "./_helpers";
 
 const COST_FIELDS: [string, string][] = [
   ["materialCost", "Material Cost"],
@@ -55,6 +56,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       },
     });
     newId = product.id;
+    await logActivity(business.id, "product.create", `Tambah produk ${name} (harga ${formatIDRPlain(sellingPrice)}, stok ${stock})`);
   });
 
   if (res.error) return res;
@@ -77,6 +79,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     const sellingPrice = parseAmount(formData.get("sellingPrice"));
     const minStock = Number(formData.get("minStock") ?? 0) || 0;
     const photoFile = formData.get("photo") as File | null;
+    const priceChanged = sellingPrice !== product.sellingPrice;
 
     if (!name) throw new Error("Nama produk wajib diisi.");
     if (sellingPrice <= 0) throw new Error("Isi harga jualnya dulu.");
@@ -100,6 +103,13 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
         },
       });
     });
+    await logActivity(
+      business.id,
+      "product.update",
+      priceChanged
+        ? `Ubah produk ${name} — harga jual ${formatIDRPlain(product.sellingPrice)} → ${formatIDRPlain(sellingPrice)}`
+        : `Ubah data produk ${name}`
+    );
   });
 
   if (res.error) return res;
@@ -128,6 +138,11 @@ export async function adjustProductStock(_prev: FormState, formData: FormData): 
         status: product.status === "inactive" ? "inactive" : newStock <= 0 ? "out_of_stock" : "active",
       },
     });
+    await logActivity(
+      business.id,
+      "stock.adjust",
+      `Sesuaikan stok ${product.name}: ${product.stock} → ${newStock}`
+    );
     revalidatePath("/products");
     revalidatePath(`/products/${productId}`);
   });
@@ -156,6 +171,7 @@ export async function deleteProduct(_prev: FormState, formData: FormData): Promi
     } else {
       await prisma.product.delete({ where: { id: productId } });
     }
+    await logActivity(business.id, "product.delete", `Arsipkan/hapus produk ${product.name}`);
   });
 
   if (res.error) return res;

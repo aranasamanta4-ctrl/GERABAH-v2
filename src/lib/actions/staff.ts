@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { type FormState, run, requireOwner } from "./_helpers";
+import { type FormState, run, requireOwner, logActivity } from "./_helpers";
 
 const staffSchema = z
   .object({
@@ -42,6 +42,7 @@ export async function addStaff(_prev: FormState, formData: FormData): Promise<Fo
         memberOfBusinessId: business.id,
       },
     });
+    await logActivity(business.id, "staff.add", `Tambah akun staf ${parsed.data.name} (${parsed.data.email})`);
   });
 
   if (res.error) return res;
@@ -59,6 +60,7 @@ export async function removeStaff(_prev: FormState, formData: FormData): Promise
       throw new Error("Staf tidak ditemukan.");
     }
     await prisma.user.delete({ where: { id } });
+    await logActivity(business.id, "staff.remove", `Hapus akun staf ${staff.name}`);
   });
 
   if (res.error) return res;

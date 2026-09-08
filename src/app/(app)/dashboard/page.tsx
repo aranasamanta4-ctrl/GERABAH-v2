@@ -34,7 +34,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const { buckets, windowLabel } = cashflowBuckets(activeRange);
   const chartFrom = buckets[0].start;
 
-  const [sales, txs, prevTxs, chartTxs, orders, products] = await Promise.all([
+  const [sales, txs, prevTxs, chartTxs, orders, products, staffActivity] = await Promise.all([
     prisma.sale.findMany({
       where: { businessId: business.id, date: { gte: from, lte: to } },
       include: { items: { include: { product: true } }, channel: true },
@@ -57,6 +57,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       orderBy: { dueDate: "asc" },
     }),
     prisma.product.findMany({ where: { businessId: business.id } }),
+    prisma.activityLog.findMany({
+      where: { businessId: business.id, role: "staff" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
   ]);
 
   const income = txs.filter((t) => t.type === "INCOME").reduce((s, t) => s + t.amount, 0);
@@ -107,6 +112,97 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
   const hasData = sales.length > 0 || txs.length > 0 || orders.length > 0;
 
+  // ── Beranda staf: harga & stok produk, tanpa angka keuangan ──
+  if (isStaff) {
+    const catalog = products
+      .filter((p) => p.status !== "inactive")
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return (
+      <>
+        <header className="mb-5">
+          <p className="label">Beranda</p>
+          <h1 className="mt-1 text-[25px] font-bold text-ink">{business.name}</h1>
+        </header>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          <Stat label="Pesanan Aktif" value={String(activeOrders.length)} href="/orders" />
+          <Stat
+            label="Belum Lunas"
+            value={formatIDRCompact(outstandingAmount)}
+            tone={outstandingAmount > 0 ? "out" : "ink"}
+            href="/receivables"
+          />
+          <Stat
+            label="Stok Menipis"
+            value={String(lowStock.length)}
+            sub="produk"
+            tone={lowStock.length > 0 ? "warn" : "ink"}
+            href="/products"
+          />
+        </div>
+
+        {dueSoon.length > 0 && (
+          <>
+            <SectionTitle>Segera Jatuh Tempo</SectionTitle>
+            <List>
+              {dueSoon.slice(0, 4).map((o) => (
+                <Row
+                  key={o.id}
+                  href={`/orders/${o.id}`}
+                  title={o.customer?.name ?? "Tanpa nama"}
+                  meta={`${o.items.map((i) => i.product.name).join(", ")} · ${o.dueDate ? formatDate(o.dueDate) : "-"}`}
+                  amount={formatIDRCompact(o.remainingPayment)}
+                  amountTone="out"
+                  trailing={<Badge tone="warn">{orderStatusLabel(o.status)}</Badge>}
+                  chevron={false}
+                />
+              ))}
+            </List>
+          </>
+        )}
+
+        <SectionTitle
+          action={
+            <Link href="/products" className="text-[12.5px] font-semibold text-clay">
+              Kelola
+            </Link>
+          }
+        >
+          Harga &amp; Stok Produk
+        </SectionTitle>
+        {catalog.length === 0 ? (
+          <EmptyState
+            icon={<IconSpark className="h-6 w-6" strokeWidth={1.7} />}
+            title="Belum ada produk"
+            body="Tambahkan produk beserta harga jual dan stoknya."
+            actionLabel="Tambah Produk"
+            actionHref="/products/new"
+          />
+        ) : (
+          <List>
+            {catalog.map((p) => (
+              <Row
+                key={p.id}
+                href={`/products/${p.id}`}
+                title={p.name}
+                amount={formatIDR(p.sellingPrice)}
+                amountSub={`stok ${p.stock}`}
+                trailing={p.stock <= p.minStock ? <Badge tone="warn">menipis</Badge> : undefined}
+              />
+            ))}
+          </List>
+        )}
+
+        <div className="mt-6">
+          <Callout>
+            Angka di sini adalah harga jual dan stok terkini. Kalau stok atau harga berubah, minta owner
+            memperbaruinya di menu Produk.
+          </Callout>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <header className="mb-5">
@@ -132,18 +228,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       ) : (
         <>
           <Card className="mb-3">
-            {!isStaff && (
-              <>
-                <p className="label">{profit >= 0 ? "Untung" : "Rugi"} {label.toLowerCase()}</p>
-                <p className={`figure mt-1.5 truncate text-[clamp(30px,10vw,40px)] ${profit >= 0 ? "text-ink" : "text-bad"}`}>
-                  {formatIDR(profit)}
-                </p>
-              </>
-            )}
-            {isStaff && <p className="label">Uang usaha {label.toLowerCase()}</p>}
-            <div
-              className={`grid grid-cols-2 gap-3 ${isStaff ? "mt-2" : "mt-4 border-t border-line pt-3.5"}`}
-            >
+            <p className="label">{profit >= 0 ? "Untung" : "Rugi"} {label.toLowerCase()}</p>
+            <p className={`figure mt-1.5 truncate text-[clamp(30px,10vw,40px)] ${profit >= 0 ? "text-ink" : "text-bad"}`}>
+              {formatIDR(profit)}
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3.5">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-soft text-teal">
                   <IconArrowDown className="h-4 w-4" strokeWidth={2.2} />
@@ -234,6 +323,30 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
                     meta={`${formatDate(t.date)} · ${t.incomeCategory?.name ?? t.expenseCategory?.name ?? "Lainnya"}`}
                     amount={`${t.type === "INCOME" ? "+" : "−"}${formatIDR(t.amount)}`}
                     amountTone={t.type === "INCOME" ? "in" : "out"}
+                    chevron={false}
+                  />
+                ))}
+              </List>
+            </>
+          )}
+
+          {staffActivity.length > 0 && (
+            <>
+              <SectionTitle
+                action={
+                  <Link href="/activity" className="text-[12.5px] font-semibold text-clay">
+                    Semua
+                  </Link>
+                }
+              >
+                Aktivitas Staf Terakhir
+              </SectionTitle>
+              <List>
+                {staffActivity.map((l) => (
+                  <Row
+                    key={l.id}
+                    title={l.summary}
+                    meta={`${formatDate(l.createdAt)} · ${l.userName}`}
                     chevron={false}
                   />
                 ))}

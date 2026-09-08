@@ -51,6 +51,8 @@ model Business {
   orders                Order[]
   financialTransactions FinancialTransaction[]
   payments              Payment[]
+  workshops             Workshop[]
+  activityLogs          ActivityLog[]
 
   @@index([ownerId])
 }
@@ -149,6 +151,7 @@ model Product {
   costComponents ProductCostComponent[]
   saleItems      SaleItem[]
   orderItems     OrderItem[]
+  workshopGifts  WorkshopGift[]
 
   @@index([businessId])
 }
@@ -263,9 +266,68 @@ model FinancialTransaction {
   reference         String?
   relatedSaleId     String?
   relatedSale       Sale?            @relation(fields: [relatedSaleId], references: [id])
+  relatedWorkshopId String?
+  relatedWorkshop   Workshop?        @relation(fields: [relatedWorkshopId], references: [id])
   notes             String?
 
   @@index([businessId, date, type])
+}
+
+// ── Workshop ──────────────────────────────────────────
+
+model Workshop {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  organizer       String // nama instansi / penyelenggara
+  date            DateTime?
+  participants    Int       @default(0)
+  operationalCost Float     @default(0) // biaya bahan & operasional
+  profitMode      String    @default("percent") // percent / nominal
+  profitValue     Float     @default(0)
+  // snapshot hasil hitung saat disimpan
+  giftCost        Float     @default(0)
+  totalCost       Float     @default(0)
+  targetProfit    Float     @default(0)
+  offerPrice      Float     @default(0)
+  pricePerPerson  Float     @default(0)
+  status          String    @default("draft") // draft / recorded
+  recordedAt      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  gifts        WorkshopGift[]
+  transactions FinancialTransaction[]
+
+  @@index([businessId, createdAt])
+}
+
+model WorkshopGift {
+  id         String   @id @default(cuid())
+  workshopId String
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitCost   Float
+
+  @@index([workshopId])
+}
+
+// ── Catatan aktivitas (log perubahan) ─────────────────
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String?
+  userName   String // snapshot nama saat kejadian
+  role       String // owner / staff (snapshot)
+  action     String // kode singkat, mis. "sale.create"
+  summary    String // kalimat bahasa Indonesia
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
 }
 
 model Payment {

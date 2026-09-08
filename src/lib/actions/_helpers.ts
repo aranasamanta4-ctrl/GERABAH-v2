@@ -65,6 +65,33 @@ export async function salesIncomeCategoryId(businessId: string) {
   return (await findOrCreateIncomeCategory(businessId, "Penjualan"))!;
 }
 
+/**
+ * Catat aktivitas pengguna (untuk log perubahan yang dilihat owner).
+ * Tidak pernah melempar error — kegagalan log tidak boleh membatalkan aksi utama.
+ */
+export async function logActivity(businessId: string, action: string, summary: string) {
+  try {
+    const session = await getSession();
+    if (!session) return;
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { name: true, role: true },
+    });
+    await prisma.activityLog.create({
+      data: {
+        businessId,
+        userId: session.userId,
+        userName: user?.name ?? "?",
+        role: user?.role ?? "owner",
+        action,
+        summary,
+      },
+    });
+  } catch (e) {
+    console.error("[activity]", e);
+  }
+}
+
 /** "1.250.000" / "Rp 1.250.000" / "1250000" -> 1250000 */
 export function parseAmount(raw: FormDataEntryValue | null): number {
   const digits = String(raw ?? "").replace(/[^\d]/g, "");

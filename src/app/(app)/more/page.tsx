@@ -10,6 +10,7 @@ import {
   IconWallet,
   IconCalculator,
   IconHelp,
+  IconClock,
 } from "@/components/icons";
 
 const LINKS = [
@@ -17,8 +18,9 @@ const LINKS = [
   { href: "/sales", label: "Penjualan", icon: IconReceipt },
   { href: "/receivables", label: "Belum Lunas", icon: IconWallet },
   { href: "/customers", label: "Pelanggan", icon: IconUsers },
-  { href: "/workshop", label: "Hitung Harga Workshop", icon: IconCalculator },
+  { href: "/workshop", label: "Workshop", icon: IconCalculator },
   { href: "/reports", label: "Laporan", icon: IconChart, ownerOnly: true },
+  { href: "/activity", label: "Log Aktivitas", icon: IconClock, ownerOnly: true },
   { href: "/help", label: "Bantuan / Tanya Admin", icon: IconHelp },
   { href: "/settings", label: "Pengaturan", icon: IconSettings, ownerOnly: true },
 ] as const;
