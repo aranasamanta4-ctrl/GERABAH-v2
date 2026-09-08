@@ -55,11 +55,20 @@ git add prisma/migrations && git commit -m "..." && git push
 ```
 Vercel build berikutnya cuma `prisma generate` (baca skema baru) + `next build`.
 
-## ⚠️ Yang BELUM jalan di production
+## Upload foto produk (Supabase Storage)
 
-**Upload foto/video** — `src/lib/upload.ts` menyimpan ke `public/uploads/` di disk. Vercel serverless
-tidak permanen; foto akan hilang. Sebelum fitur foto dipakai serius, pindahkan ke **Supabase Storage**
-(project Supabase sudah ada). Sampai itu dikerjakan, produk tanpa foto tetap berfungsi normal.
+`src/lib/upload.ts` mengunggah ke **Supabase Storage** kalau `SUPABASE_SERVICE_ROLE_KEY` diset.
+Tanpa key, foto disimpan ke disk lokal — **tidak jalan di Vercel** (filesystem read-only).
+
+Langkah sekali saja:
+
+1. Supabase → **Storage** → **New bucket** → nama `uploads` → centang **Public bucket** → Save.
+2. Supabase → **Settings → API** → salin **`service_role`** key (RAHASIA).
+3. Vercel → **Settings → Environment Variables** → tambah `SUPABASE_SERVICE_ROLE_KEY` = key tadi
+   (Production + Preview + Development) → **Redeploy**.
+
+Foto tampil lewat URL publik `…/storage/v1/object/public/uploads/…` (dipakai `<img>` biasa, tidak
+perlu allowlist domain).
 
 ## Custom domain (opsional)
 
