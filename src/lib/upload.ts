@@ -39,6 +39,8 @@ export async function saveUploadedFile(file: File | null): Promise<string | null
   const filename = `${randomUUID()}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
+  const onVercel = !!process.env.VERCEL;
+
   if (SERVICE_KEY) {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filename}`, {
       method: "POST",
@@ -55,16 +57,24 @@ export async function saveUploadedFile(file: File | null): Promise<string | null
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       console.error("[upload] Supabase Storage gagal", res.status, detail);
-      throw new Error(
-        res.status === 404
-          ? `Bucket "${BUCKET}" belum dibuat di Supabase Storage.`
-          : "Gagal mengunggah foto. Coba lagi."
-      );
+      if (res.status === 404) throw new Error(`Bucket "${BUCKET}" belum dibuat di Supabase Storage.`);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Kunci Supabase (SUPABASE_SERVICE_ROLE_KEY) salah atau tidak berlaku.");
+      }
+      throw new Error(`Gagal mengunggah foto (kode ${res.status}). Coba lagi.`);
     }
     return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filename}`;
   }
 
-  // Fallback lokal (dev). Di Vercel filesystem read-only — akan error, itu wajar.
+  if (onVercel) {
+    // Di Vercel filesystem read-only — tanpa SUPABASE_SERVICE_ROLE_KEY foto tidak bisa disimpan.
+    throw new Error(
+      "Upload foto belum aktif. Owner perlu mengatur SUPABASE_SERVICE_ROLE_KEY di server. " +
+        "Untuk sekarang, simpan produk tanpa foto dulu."
+    );
+  }
+
+  // Fallback lokal (dev).
   await mkdir(UPLOAD_DIR, { recursive: true });
   await writeFile(path.join(UPLOAD_DIR, filename), buffer);
   return `/uploads/${filename}`;
