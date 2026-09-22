@@ -53,6 +53,11 @@ model Business {
   payments              Payment[]
   workshops             Workshop[]
   activityLogs          ActivityLog[]
+  assets                Asset[]
+  fixedCostCategories   FixedCostCategory[]
+  fixedCosts            FixedCost[]
+  productOtherCostCategories ProductOtherCostCategory[]
+  productChangeRequests ProductChangeRequest[]
 
   @@index([ownerId])
 }
@@ -149,6 +154,8 @@ model Product {
   createdAt    DateTime         @default(now())
 
   costComponents ProductCostComponent[]
+  materials      ProductMaterial[]
+  changeRequests ProductChangeRequest[]
   saleItems      SaleItem[]
   orderItems     OrderItem[]
   workshopGifts  WorkshopGift[]
@@ -157,12 +164,61 @@ model Product {
 }
 
 model ProductCostComponent {
+  id              String                    @id @default(cuid())
+  productId       String
+  product         Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label           String  // Packaging Cost / Other Cost (Material Cost & Labor Cost lama dipindah ke ProductMaterial & FixedCost)
+  amount          Float
+  otherCategoryId String?
+  otherCategory   ProductOtherCostCategory? @relation(fields: [otherCategoryId], references: [id])
+
+  @@index([productId])
+  @@index([otherCategoryId])
+}
+
+/** Rincian bahan baku per produk — pengganti materialCost yang dulu cuma satu angka. */
+model ProductMaterial {
   id        String  @id @default(cuid())
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  label     String  // Material Cost / Labor Cost / Packaging Cost / Other
-  amount    Float
+  name      String
+  quantity  Float   @default(1)
+  unit      String  @default("pcs")
+  unitCost  Float   @default(0)
 
+  @@index([productId])
+}
+
+/** Kategori biaya "lain-lain" per produk — dipilih dari daftar atau tambah baru (bukan field bebas "lain-lain"). */
+model ProductOtherCostCategory {
+  id         String                 @id @default(cuid())
+  businessId String
+  business   Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  components ProductCostComponent[]
+
+  @@unique([businessId, name])
+}
+
+/** Pengajuan perubahan harga jual oleh staf — berlaku setelah disetujui owner. */
+model ProductChangeRequest {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  field           String    @default("sellingPrice")
+  oldValue        Float
+  newValue        Float
+  requestedById   String?
+  requestedByName String
+  status          String    @default("pending") // pending / approved / rejected
+  reviewedById    String?
+  reviewNote      String?
+  createdAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+
+  @@index([businessId, status])
   @@index([productId])
 }
 
@@ -271,6 +327,54 @@ model FinancialTransaction {
   notes             String?
 
   @@index([businessId, date, type])
+}
+
+// ── Aset & Biaya Tetap ────────────────────────────────
+// Dihitung di awal (sebelum operasional jalan): daftar aset usaha + biaya yang jalan terus tiap
+// bulan/tahun terlepas dari ramai-tidaknya penjualan (termasuk langganan software/alat).
+
+model Asset {
+  id            String    @id @default(cuid())
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name          String
+  category      String    @default("Lainnya") // Alat Produksi / Kendaraan / Bangunan / Elektronik / Lainnya
+  purchaseValue Float
+  purchaseDate  DateTime?
+  note          String?
+  createdAt     DateTime  @default(now())
+
+  @@index([businessId])
+}
+
+model FixedCostCategory {
+  id         String      @id @default(cuid())
+  businessId String
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  fixedCosts FixedCost[]
+
+  @@unique([businessId, name])
+}
+
+model FixedCost {
+  id             String             @id @default(cuid())
+  businessId     String
+  business       Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name           String
+  categoryId     String?
+  category       FixedCostCategory? @relation(fields: [categoryId], references: [id])
+  amount         Float
+  period         String             @default("monthly") // monthly / yearly / one_time
+  startDate      DateTime           @default(now())
+  endDate        DateTime? // dipakai untuk langganan yang punya masa berlaku
+  durationMonths Int? // opsional: lama langganan dalam bulan (buat hitung/tampilkan tanggal habis)
+  active         Boolean            @default(true)
+  note           String?
+  createdAt      DateTime           @default(now())
+
+  @@index([businessId])
+  @@index([categoryId])
 }
 
 // ── Workshop ──────────────────────────────────────────

@@ -47,6 +47,18 @@ export function costLabel(label: string): string {
   return COST_LABEL[label] ?? label;
 }
 
+export const FIXED_COST_PERIOD_LABEL: Record<string, string> = {
+  monthly: "Bulanan",
+  yearly: "Tahunan",
+  one_time: "Sekali Bayar",
+};
+
+export function fixedCostPeriodLabel(period: string): string {
+  return FIXED_COST_PERIOD_LABEL[period] ?? period;
+}
+
+export const ASSET_CATEGORIES = ["Alat Produksi", "Kendaraan", "Bangunan", "Elektronik", "Lainnya"] as const;
+
 export type StatusTone = "good" | "warn" | "bad" | "neutral" | "info";
 
 export function paymentStatusTone(status: string): StatusTone {

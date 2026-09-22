@@ -8,15 +8,20 @@ export default async function NewProductPage() {
   const business = await getCurrentBusiness();
   if (!business) return null;
 
-  const categories = await prisma.productCategory.findMany({
-    where: { businessId: business.id },
-    orderBy: { name: "asc" },
-  });
+  const [categories, otherCostCategories] = await Promise.all([
+    prisma.productCategory.findMany({ where: { businessId: business.id }, orderBy: { name: "asc" } }),
+    prisma.productOtherCostCategory.findMany({ where: { businessId: business.id }, orderBy: { name: "asc" } }),
+  ]);
 
   return (
     <>
       <PageHeader title="Tambah Produk" back="/products" />
-      <ProductForm action={createProduct} categories={categories.map((c) => c.name)} submitLabel="Simpan Produk" />
+      <ProductForm
+        action={createProduct}
+        categories={categories.map((c) => c.name)}
+        otherCostCategories={otherCostCategories.map((c) => c.name)}
+        submitLabel="Simpan Produk"
+      />
     </>
   );
 }

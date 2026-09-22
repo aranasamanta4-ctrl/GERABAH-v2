@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { getSessionContext } from "@/lib/current-user";
 import { List, Row, Avatar, Badge } from "@/components/ui";
 import { LogoutButton } from "@/components/logout-button";
@@ -11,6 +12,8 @@ import {
   IconCalculator,
   IconHelp,
   IconClock,
+  IconLayers,
+  IconClipboardCheck,
 } from "@/components/icons";
 
 const LINKS = [
@@ -19,6 +22,8 @@ const LINKS = [
   { href: "/receivables", label: "Belum Lunas", icon: IconWallet },
   { href: "/customers", label: "Pelanggan", icon: IconUsers },
   { href: "/workshop", label: "Workshop", icon: IconCalculator },
+  { href: "/approvals", label: "Persetujuan", icon: IconClipboardCheck, ownerOnly: true },
+  { href: "/assets", label: "Aset & Biaya Tetap", icon: IconLayers, ownerOnly: true },
   { href: "/reports", label: "Laporan", icon: IconChart, ownerOnly: true },
   { href: "/activity", label: "Log Aktivitas", icon: IconClock, ownerOnly: true },
   { href: "/help", label: "Bantuan / Tanya Admin", icon: IconHelp },
@@ -31,6 +36,10 @@ export default async function MorePage() {
   const business = ctx?.business ?? null;
   const role = ctx?.role ?? "owner";
   const links = role === "owner" ? LINKS : LINKS.filter((l) => !("ownerOnly" in l && l.ownerOnly));
+  const pendingApprovals =
+    role === "owner" && business
+      ? await prisma.productChangeRequest.count({ where: { businessId: business.id, status: "pending" } })
+      : 0;
 
   return (
     <>
@@ -58,6 +67,7 @@ export default async function MorePage() {
               </span>
             }
             title={l.label}
+            trailing={l.href === "/approvals" && pendingApprovals > 0 ? <Badge tone="warn">{pendingApprovals}</Badge> : undefined}
           />
         ))}
       </List>

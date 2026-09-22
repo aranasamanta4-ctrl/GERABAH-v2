@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const period = searchParams.get("period") ?? "month";
   const download = searchParams.get("download") === "1";
-  const { from, to, label } = resolveRange(period);
+  const { from, to, label } = resolveRange(period, searchParams.get("from") ?? undefined, searchParams.get("to") ?? undefined);
 
   const [txs, opening, sales, orders, unpaidSales, products, owner] = await Promise.all([
     prisma.financialTransaction.findMany({
@@ -117,7 +117,9 @@ export async function GET(request: Request) {
     totalInventoryValue,
   });
 
-  const filename = `Laporan-Keuangan-${period}.pdf`;
+  const filenameSuffix =
+    period === "custom" ? `${searchParams.get("from") ?? ""}_${searchParams.get("to") ?? ""}` : period;
+  const filename = `Laporan-Keuangan-${filenameSuffix}.pdf`;
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",

@@ -4,6 +4,13 @@
 
 ## ✅ Sudah beres
 
+- **Keamanan (22 Sep 2026):** `npm audit` sempat menemukan 1 kerentanan **critical** (Next.js RCE di
+  server Windows, lewat Image Optimization API — celah ada di versi `16.0.0–16.3.2`) + beberapa
+  **high** transitif dari tooling Prisma (`mysql2`, `deepmerge-ts`, tidak terpakai di jalur aplikasi
+  yang sesungguhnya karena kita cuma pakai Postgres). Sudah diperbaiki: `next` naik ke `16.3.5`
+  (patch resmi, bukan perubahan besar) + `overrides` di `package.json` mengunci `mysql2`/
+  `deepmerge-ts` ke versi yang sudah ditambal. `npm audit` sekarang **0 kerentanan**. Build, lint,
+  `prisma validate`, dan smoke test halaman sudah dicek ulang setelah upgrade — semua normal.
 - Project Supabase (`ref sndvjvtfdsgbgedrevic`, ap-southeast-1) + `.env` terisi + `AUTH_SECRET` acak.
 - `prisma migrate dev --name init` — semua tabel dibuat.
 - Smoke test lewat HTTP: **semua 30 route** (termasuk detail produk/penjualan/pesanan/pelanggan, form
@@ -34,6 +41,15 @@
 6. Belum ada service worker offline. Manifest + install-to-homescreen sudah jalan.
 7. `next dev` menulis blok "This is NOT the Next.js you know" ke `AGENTS.md` saat pertama jalan — commit
    file itu bersama perubahan berikutnya supaya tree bersih.
+8. ✅ **Selesai (22 Sep 2026)** — permintaan fitur baru dari mitra: aset & fixed cost (`/assets`),
+   langganan sebagai fixed cost, ekspor laporan `.xlsx` asli (bukan CSV), rentang tanggal kustom di
+   Laporan, otorisasi owner untuk perubahan harga produk (`/approvals`), bahan baku rinci per item,
+   tenaga kerja pindah ke biaya tetap bulanan (bukan per produk), kategori "lain-lain" bisa
+   pilih/tambah sendiri, rekomendasi harga jual, dan formulir pencatatan manual
+   (`docs/FORMULIR-PENCATATAN-MANUAL.md`). Detail keputusan yang diambil ada di
+   `docs/EVALUASI-DAN-RENCANA-PENGEMBANGAN.md` §10.7. Migrasi DB `20260922022325_...` sudah
+   dijalankan (additive, tidak ada data lama yang hilang) dan data lama sudah dipindah lewat
+   `scripts/migrate-product-costs.ts`.
 
 ## Reset data
 

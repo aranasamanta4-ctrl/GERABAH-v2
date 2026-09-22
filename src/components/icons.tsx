@@ -241,3 +241,21 @@ export const IconMessage = (p: P) => (
     <path d="M8 9h8M8 12h5" />
   </Icon>
 );
+
+/** Aset & Biaya Tetap — tumpukan kotak */
+export const IconLayers = (p: P) => (
+  <Icon {...p}>
+    <path d="m12 3 8.5 4.8L12 12.6 3.5 7.8 12 3Z" />
+    <path d="m3.5 12 8.5 4.8 8.5-4.8" />
+    <path d="m3.5 16.2 8.5 4.8 8.5-4.8" />
+  </Icon>
+);
+
+/** Persetujuan — clipboard bercentang */
+export const IconClipboardCheck = (p: P) => (
+  <Icon {...p}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4a3 3 0 0 1 6 0" />
+    <path d="m9 13 2 2 4-4.5" />
+  </Icon>
+);

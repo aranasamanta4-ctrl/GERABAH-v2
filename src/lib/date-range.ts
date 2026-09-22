@@ -1,6 +1,14 @@
-export type RangeKey = "today" | "week" | "month" | "year";
+export type RangeKey = "today" | "week" | "month" | "year" | "custom";
 
-export function resolveRange(key: string | undefined): { from: Date; to: Date; label: string } {
+/**
+ * `customFrom`/`customTo` (format "YYYY-MM-DD") dipakai kalau key === "custom" — rentang tanggal
+ * bebas untuk laporan (lihat docs/EVALUASI-DAN-RENCANA-PENGEMBANGAN.md §10.2.4).
+ */
+export function resolveRange(
+  key: string | undefined,
+  customFrom?: string,
+  customTo?: string
+): { from: Date; to: Date; label: string } {
   const now = new Date();
   const to = now;
 
@@ -16,6 +24,12 @@ export function resolveRange(key: string | undefined): { from: Date; to: Date; l
   if (key === "year") {
     const from = new Date(now.getFullYear(), 0, 1);
     return { from, to, label: "Tahun Ini" };
+  }
+  if (key === "custom" && customFrom) {
+    const from = new Date(`${customFrom}T00:00:00`);
+    const toParsed = customTo ? new Date(`${customTo}T23:59:59.999`) : to;
+    const label = customTo && customTo !== customFrom ? `${customFrom} s/d ${customTo}` : customFrom;
+    return { from, to: toParsed, label: `Kustom · ${label}` };
   }
   const from = new Date(now.getFullYear(), now.getMonth(), 1);
   return { from, to, label: "Bulan Ini" };

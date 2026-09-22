@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/actions/_helpers";
-import { resolveRange } from "@/lib/date-range";
+import { resolveRange, todayISO } from "@/lib/date-range";
 import { formatIDR } from "@/lib/format";
 import { Card, Callout } from "@/components/ui";
 import { Segmented } from "@/components/segmented";
@@ -10,14 +10,22 @@ const PERIODS = [
   { key: "week", label: "Mingguan", href: "/reports?period=week" },
   { key: "month", label: "Bulanan", href: "/reports?period=month" },
   { key: "year", label: "Tahunan", href: "/reports?period=year" },
+  { key: "custom", label: "Kustom", href: "/reports?period=custom" },
 ];
 
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
-  const { period } = await searchParams;
-  const active = period === "week" ? "week" : period === "year" ? "year" : "month";
+  const { period, from: fromParam, to: toParam } = await searchParams;
+  const active =
+    period === "week" ? "week" : period === "year" ? "year" : period === "custom" ? "custom" : "month";
   const business = await requireOwner();
 
-  const { from, to, label } = resolveRange(active);
+  const customFrom = typeof fromParam === "string" ? fromParam : undefined;
+  const customTo = typeof toParam === "string" ? toParam : undefined;
+  const { from, to, label } = resolveRange(active, customFrom, customTo);
+  const downloadQuery =
+    active === "custom" && customFrom
+      ? `period=custom&from=${customFrom}&to=${customTo ?? customFrom}`
+      : `period=${active}`;
 
   const [txs, opening, sales, unpaidOrders, unpaidSales, products] = await Promise.all([
     prisma.financialTransaction.findMany({
@@ -92,6 +100,23 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
       <div className="mb-4">
         <Segmented options={PERIODS} active={active} />
       </div>
+
+      {active === "custom" && (
+        <form method="get" className="mb-4 flex items-end gap-2">
+          <input type="hidden" name="period" value="custom" />
+          <label className="block flex-1">
+            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Dari tanggal</span>
+            <input type="date" name="from" defaultValue={customFrom ?? todayISO()} max={todayISO()} required className="field" />
+          </label>
+          <label className="block flex-1">
+            <span className="mb-1.5 block text-[13px] font-medium text-ink-2">Sampai tanggal</span>
+            <input type="date" name="to" defaultValue={customTo ?? todayISO()} max={todayISO()} required className="field" />
+          </label>
+          <button type="submit" className="btn btn-primary !min-h-[46px] !px-4">
+            Tampilkan
+          </button>
+        </form>
+      )}
 
       {txs.length === 0 ? (
         <Callout>Belum ada transaksi pada periode ini. Catat dulu uang masuk dan keluar di menu Keuangan.</Callout>
@@ -209,18 +234,18 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           </section>
 
           <div className="grid grid-cols-2 gap-2.5">
-            <a href={`/api/reports/pdf?period=${active}&download=1`} className="btn btn-primary">
+            <a href={`/api/reports/pdf?${downloadQuery}&download=1`} className="btn btn-primary">
               <IconDownload className="h-[18px] w-[18px]" strokeWidth={2} />
               Unduh PDF
             </a>
-            <a href={`/api/reports/export?period=${active}`} className="btn btn-secondary">
+            <a href={`/api/reports/export?${downloadQuery}`} className="btn btn-secondary">
               <IconDownload className="h-[18px] w-[18px]" strokeWidth={2} />
-              Unduh Excel
+              Unduh Excel (.xlsx)
             </a>
           </div>
           <p className="text-help -mt-2 text-center">
-            PDF berisi laporan lengkap (laba rugi, arus kas, penjualan, piutang, persediaan). Excel berisi rincian
-            penjualan per baris.
+            PDF berisi laporan lengkap (laba rugi, arus kas, penjualan, piutang, persediaan). Excel (.xlsx) berisi
+            rincian penjualan per baris — file Excel asli, bisa langsung dibuka tanpa peringatan format.
           </p>
         </div>
       )}

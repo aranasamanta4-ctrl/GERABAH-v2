@@ -60,6 +60,9 @@ export const findOrCreateIncomeCategory = (b: string, n: string) => findOrCreate
 export const findOrCreateExpenseCategory = (b: string, n: string) => findOrCreate(prisma.expenseCategory, b, n);
 export const findOrCreateProductCategory = (b: string, n: string) => findOrCreate(prisma.productCategory, b, n);
 export const findOrCreateChannel = (b: string, n: string) => findOrCreate(prisma.salesChannel, b, n);
+export const findOrCreateProductOtherCostCategory = (b: string, n: string) =>
+  findOrCreate(prisma.productOtherCostCategory, b, n);
+export const findOrCreateFixedCostCategory = (b: string, n: string) => findOrCreate(prisma.fixedCostCategory, b, n);
 
 export async function salesIncomeCategoryId(businessId: string) {
   return (await findOrCreateIncomeCategory(businessId, "Penjualan"))!;
@@ -122,4 +125,24 @@ export function sumQtyByProduct(items: LineItemInput[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const it of items) m.set(it.productId, (m.get(it.productId) ?? 0) + it.quantity);
   return m;
+}
+
+export type MaterialInput = { name: string; quantity: number; unit: string; unitCost: number };
+
+/** Baca rincian bahan baku dari field JSON tersembunyi form produk. */
+export function parseMaterials(raw: FormDataEntryValue | null): MaterialInput[] {
+  try {
+    const arr = JSON.parse(String(raw ?? "[]"));
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((x) => ({
+        name: String(x?.name ?? "").trim(),
+        quantity: Math.max(0, Number(x?.quantity) || 0),
+        unit: String(x?.unit ?? "pcs").trim() || "pcs",
+        unitCost: Math.max(0, Number(x?.unitCost) || 0),
+      }))
+      .filter((m) => m.name);
+  } catch {
+    return [];
+  }
 }

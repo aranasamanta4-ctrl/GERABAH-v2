@@ -4,11 +4,17 @@ import { getSession } from "@/lib/auth";
 import { getSessionContext } from "@/lib/current-user";
 import { resolveRange } from "@/lib/date-range";
 import { paymentStatusLabel } from "@/lib/labels";
+import { buildXlsxBuffer } from "@/lib/xlsx-export";
 
-function csvEscape(value: string | number) {
-  const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+type ExportRow = {
+  date: Date;
+  customer: string;
+  product: string;
+  quantity: number;
+  total: number;
+  channel: string;
+  status: string;
+};
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -20,7 +26,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const periodParam = searchParams.get("period") ?? "month";
-  const { from, to } = resolveRange(periodParam);
+  const { from, to } = resolveRange(periodParam, searchParams.get("from") ?? undefined, searchParams.get("to") ?? undefined);
 
   const sales = await prisma.sale.findMany({
     where: { businessId: business.id, date: { gte: from, lte: to } },
@@ -28,27 +34,38 @@ export async function GET(request: Request) {
     orderBy: { date: "asc" },
   });
 
-  const rows = [
-    ["Tanggal", "Pelanggan", "Produk", "Jumlah", "Total", "Channel", "Status Pembayaran"],
-    ...sales.flatMap((s) =>
-      s.items.map((i) => [
-        s.date.toISOString().slice(0, 10),
-        s.customer?.name ?? "Tanpa nama",
-        i.product.name,
-        String(i.quantity),
-        String(s.total),
-        s.channel?.name ?? "-",
-        paymentStatusLabel(s.paymentStatus),
-      ])
-    ),
-  ];
+  const rows: ExportRow[] = sales.flatMap((s) =>
+    s.items.map((i) => ({
+      date: s.date,
+      customer: s.customer?.name ?? "Tanpa nama",
+      product: i.product.name,
+      quantity: i.quantity,
+      total: s.total,
+      channel: s.channel?.name ?? "-",
+      status: paymentStatusLabel(s.paymentStatus),
+    }))
+  );
 
-  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const buffer = await buildXlsxBuffer(rows, [
+    { header: "Tanggal", get: (r) => r.date, width: 14 },
+    { header: "Pelanggan", get: (r) => r.customer, width: 22 },
+    { header: "Produk", get: (r) => r.product, width: 24 },
+    { header: "Jumlah", get: (r) => r.quantity, width: 10 },
+    { header: "Total", get: (r) => r.total, width: 16 },
+    { header: "Channel", get: (r) => r.channel, width: 16 },
+    { header: "Status Pembayaran", get: (r) => r.status, width: 18 },
+  ]);
 
-  return new NextResponse(csv, {
+  const filenameSuffix =
+    periodParam === "custom"
+      ? `${searchParams.get("from") ?? ""}_${searchParams.get("to") ?? ""}`
+      : periodParam;
+
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="gerabah-report-${periodParam}.csv"`,
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="gerabah-laporan-${filenameSuffix}.xlsx"`,
+      "Cache-Control": "no-store",
     },
   });
 }
